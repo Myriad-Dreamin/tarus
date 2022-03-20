@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package tarus.api.reporter;
+
+option go_package = "tarus/;tarus";
+
+message CallbackJudgeItem {
+  bytes judge_key = 1;
+  int64 time_use = 101;
+  int64 memory_use = 102;
+  int64 judge_result = 103;
+  string hint = 104;
+}
+
+message CallbackJudgeResponse {
+  repeated CallbackJudgeItem items = 1;
+}
+
+service JudgeResultReporter {
+  rpc CallbackJudge(CallbackJudgeItem) returns (CallbackJudgeResponse);
+}

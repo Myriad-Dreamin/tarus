@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package tarus.api.judge;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "tarus/;tarus";
+
+message HandshakeRequest {
+  bytes api_version = 1;
+  string web_hook_url = 101;
+}
+
+message CreateContainerRequest {
+  bytes task_key = 1;
+  string image_id = 2;
+  int64 estimated_timeout = 101;
+  int64 estimated_memory = 102;
+}
+
+message RemoveContainerRequest {
+  bytes task_key = 1;
+}
+
+message CopyRequest {
+  bytes task_key = 1;
+  string from_url = 2;
+  string to_path = 3;
+}
+
+message MakeJudgeItem {
+  bytes task_key = 1;
+  bytes judge_key = 2;
+  string io_provider = 3;
+  int64 estimated_timeout = 101;
+  int64 estimated_memory = 102;
+}
+
+message MakeJudgeRequest {
+  repeated MakeJudgeItem items = 1;
+}
+
+message QueryJudgeRequest {
+  bytes task_key = 1;
+  bytes judge_key = 2;
+}
+
+message QueryJudgeItem {
+  bytes judge_key = 1;
+  int64 time_use = 101;
+  int64 memory_use = 102;
+  int64 judge_result = 103;
+  string hint = 104;
+}
+
+message QueryJudgeResponse {
+  repeated QueryJudgeItem items = 1;
+}
+
+service JudgeService {
+  rpc Handshake(HandshakeRequest) returns (google.protobuf.Empty);
+  rpc CreateContainer(CreateContainerRequest) returns (google.protobuf.Empty);
+  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  rpc RemoveContainer(RemoveContainerRequest) returns (google.protobuf.Empty);
+  rpc MakeJudge(MakeJudgeRequest) returns (google.protobuf.Empty);
+  rpc QueryJudge(QueryJudgeRequest) returns (QueryJudgeResponse);
+}

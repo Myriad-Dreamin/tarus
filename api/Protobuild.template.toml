@@ -1,0 +1,29 @@
+# https://github.com/containerd/protobuild/blob/main/Protobuild.toml
+version = "2"
+
+generators = ["go", "go-grpc"]
+
+# Control protoc include paths. Below are usually some good defaults, but feel
+# free to try it without them if it works for your project.
+[includes]
+before = [
+  # include current path
+  "((PWD))",
+  # for protobuf system files
+  "((HOME))/deployment/protobuf/include"
+]
+
+# This section let's us map protobuf imports to Go packages. These will become
+# `-M` directives in the call to the go protobuf generator.
+[packages]
+
+[[overrides]]
+prefixes = ["github.com/Myriad-Dreamin/tarus/api/judge"]
+
+# This takes inspiration from Go's API checker in
+# https://github.com/golang/go/tree/master/api, but does so for protobufs.
+# Stablize packages and collections of packages of generated protobufs.
+[[descriptors]]
+
+prefix = "github.com/Myriad-Dreamin/tarus/api"
+target = "next.pb.txt"
