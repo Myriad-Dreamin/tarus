@@ -38,6 +38,7 @@ message MakeJudgeItem {
 
 message MakeJudgeRequest {
   repeated MakeJudgeItem items = 1;
+  bool is_async = 101;
 }
 
 message QueryJudgeRequest {
