@@ -38,6 +38,14 @@ func (c *ContainerdJudgeServiceServer) Close() error {
 	return c.client.Close()
 }
 
+func (c *ContainerdJudgeServiceServer) Handshake(ctx context.Context, request *tarus.HandshakeRequest) (*emptypb.Empty, error) {
+	return c.UnimplementedJudgeServiceServer.Handshake(ctx, request)
+}
+
+func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *tarus.CopyRequest) (*emptypb.Empty, error) {
+	return c.UnimplementedJudgeServiceServer.CopyFile(ctx, request)
+}
+
 func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, request *tarus.CreateContainerRequest) (_ *emptypb.Empty, err error) {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
 	snapshotter := containerd.DefaultSnapshotter
@@ -83,6 +91,14 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 	}
 	err = cc.Delete(ctx, containerd.WithSnapshotCleanup)
 	return nil, err
+}
+
+func (c *ContainerdJudgeServiceServer) MakeJudge(ctx context.Context, request *tarus.MakeJudgeRequest) (*emptypb.Empty, error) {
+	return c.UnimplementedJudgeServiceServer.MakeJudge(ctx, request)
+}
+
+func (c *ContainerdJudgeServiceServer) QueryJudge(ctx context.Context, request *tarus.QueryJudgeRequest) (*tarus.QueryJudgeResponse, error) {
+	return c.UnimplementedJudgeServiceServer.QueryJudge(ctx, request)
 }
 
 func (c *ContainerdJudgeServiceServer) ImportOCIArchive(ctx context.Context, fp string) error {
