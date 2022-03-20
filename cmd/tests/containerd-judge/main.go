@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/Myriad-Dreamin/tarus/pkg/tarus_judge"
-	oci_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus_judge/oci"
+	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
+	oci_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge/oci"
 )
 
 func main() {

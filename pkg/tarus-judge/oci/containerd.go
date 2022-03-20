@@ -4,7 +4,7 @@ import (
 	context "context"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
-	"github.com/Myriad-Dreamin/tarus/pkg/tarus_judge"
+	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var fixedContainerId = "tarus_judge-engine0"
+var fixedContainerId = "tarus-engine0"
 
 type ContainerdJudgeServiceServer struct {
 	tarus.UnimplementedJudgeServiceServer
@@ -53,7 +53,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 		return nil, err
 	}
 
-	fixedContainerSnapshotId := "tarus_judge-engine-snapshot0"
+	fixedContainerSnapshotId := "tarus-engine-snapshot0"
 
 	if err = c.client.SnapshotService(snapshotter).Remove(ctx, fixedContainerSnapshotId); err != nil && !errdefs.IsNotFound(err) {
 		return nil, err
