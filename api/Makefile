@@ -7,4 +7,4 @@ generate: Protobuild
 	@cp $(shell go env GOPATH)/src/tarus/* ./tarus
 
 Protobuild:
-	@sed -e "s+((PWD))+$(PWD)+g" -e "s+((HOME))+$(HOME)+g" Protobuild.template.toml > Protobuild.toml
+	@sed -e "s+((PWD))+$(PWD)+g" -e "s+((HOME))+$(HOME)+g" -e "s+((GOMODCACHE))+$(shell go env GOMODCACHE)+g" Protobuild.template.toml > Protobuild.toml

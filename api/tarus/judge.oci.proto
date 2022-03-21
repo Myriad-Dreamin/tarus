@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package tarus.api.judge.oci;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "tarus/;tarus";
+
+message OCIJudgeSession {
+
+  // StartedAt provides the time session begin.
+  google.protobuf.Timestamp created_at = 1;
+
+  // UpdatedAt provides the last time of a successful write.
+  google.protobuf.Timestamp updated_at = 2;
+
+  int32 commit_status = 3;
+  string container_id = 4;
+  string bin_target = 5;
+
+  string host_workdir = 101;
+}
