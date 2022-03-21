@@ -29,15 +29,19 @@ message CopyRequest {
 }
 
 message MakeJudgeItem {
-  bytes task_key = 1;
-  bytes judge_key = 2;
-  string io_provider = 3;
+  bytes judge_key = 1;
+  string io_provider = 2;
+  // stdin
+  string input_url = 3;
+  // stdout
+  string output_url = 4;
   int64 estimated_timeout = 101;
   int64 estimated_memory = 102;
 }
 
 message MakeJudgeRequest {
-  repeated MakeJudgeItem items = 1;
+  bytes task_key = 1;
+  repeated MakeJudgeItem items = 2;
   bool is_async = 101;
 }
 
