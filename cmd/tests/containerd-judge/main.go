@@ -17,12 +17,13 @@ func main() {
 
 	ctx := context.Background()
 
-	if err = client.ImportOCIArchive(ctx, "busybox.tar"); err != nil {
+	if err = client.ImportOCIArchive(ctx, "ubuntu.tar"); err != nil {
 		panic(err)
 	}
 
 	if err = client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
-		ImageId: "docker.io/library/busybox:1.35.0",
+		ImageId:    "docker.io/library/ubuntu:20.04",
+		ProgramBin: "./cmd/tests/containerd-judge/io_test",
 	}); err != nil {
 		panic(err)
 	}
