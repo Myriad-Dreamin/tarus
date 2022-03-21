@@ -22,8 +22,8 @@ func main() {
 	}
 
 	if err = client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
-		ImageId:    "docker.io/library/ubuntu:20.04",
-		ProgramBin: "/workdir/echo_test",
+		ImageId:   "docker.io/library/ubuntu:20.04",
+		BinTarget: "/workdir/echo_test",
 	}); err != nil {
 		panic(err)
 	}
