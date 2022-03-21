@@ -1,18 +1,22 @@
 package oci_judge
 
 import (
+	"bytes"
 	context "context"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -66,12 +70,30 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 	if err != nil {
 		return nil, err
 	}
+	mounts := make([]specs.Mount, 0)
+
+	m, err := filepath.Abs("./data/workdir-judge-engine0")
+	if err != nil {
+		return nil, err
+	}
+	mounts = append(mounts, specs.Mount{
+		// notes: linux only flags
+		Type:        "bind",
+		Source:      m,
+		Destination: "/workdir",
+		Options:     []string{"rbind", "ro"},
+	})
+
 	container, err := c.client.NewContainer(
 		ctx,
 		fixedContainerId,
 		containerd.WithImage(image),
 		containerd.WithNewSnapshot(fixedContainerSnapshotId, image),
-		containerd.WithNewSpec(oci.WithImageConfig(image)),
+		containerd.WithNewSpec(
+			oci.WithImageConfig(image),
+			oci.WithMounts(mounts),
+			oci.WithProcessCwd("/workdir"),
+		),
 	)
 
 	if err != nil {
@@ -126,9 +148,49 @@ func (c *ContainerdJudgeServiceServer) TransientJudge(rawCtx context.Context, re
 		}
 		return c.withFreshTask(ctx, cc, func(t containerd.Task) error {
 			fmt.Printf("linux container create successfully\n")
+			spec, err := cc.Spec(ctx)
+			if err != nil {
+				return err
+			}
 
-			time.Sleep(3 * time.Second)
-			fmt.Printf("linux container stop\n")
+			procOpts := spec.Process
+			procOpts.Terminal = false
+			procOpts.Args = []string{"/workdir/echo_test"}
+
+			var b = bytes.NewBuffer([]byte{})
+			process, err := t.Exec(ctx, "judge_exec", procOpts, cio.NewCreator(cio.WithStreams(bytes.NewReader(nil), b, os.Stderr)))
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_, _ = process.Delete(ctx)
+			}()
+
+			statusC, err := process.Wait(ctx)
+			if err != nil {
+				return err
+			}
+
+			if err := process.Start(ctx); err != nil {
+				return err
+			}
+			defer func() {
+				// todo: check process status
+				_ = c.killProcess(ctx, process)
+			}()
+
+			select {
+			case st := <-statusC:
+				code, _, err := st.Result()
+				if err != nil {
+					return err
+				}
+				fmt.Printf("linux container exit: %v\n", code)
+				fmt.Printf("judge output: %v", b.String())
+			case <-time.After(time.Second * 3):
+				fmt.Printf("linux container timeout stop\n")
+			}
+
 			return nil
 		})
 	})

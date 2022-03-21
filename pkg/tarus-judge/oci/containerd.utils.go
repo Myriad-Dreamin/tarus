@@ -42,7 +42,7 @@ func (c *ContainerdJudgeServiceServer) prepareImageOnSnapshotter(
 	return nil
 }
 
-func (c *ContainerdJudgeServiceServer) killTask(ctx context.Context, t containerd.Task) (err error) {
+func (c *ContainerdJudgeServiceServer) killProcess(ctx context.Context, t containerd.Process) (err error) {
 	defer func() {
 		if err == nil {
 			_, err = t.Delete(ctx)
@@ -78,7 +78,7 @@ func (c *ContainerdJudgeServiceServer) withFreshTask(
 	})
 	if err == nil {
 		// todo: check task status
-		_ = c.killTask(ctx, t)
+		_ = c.killProcess(ctx, t)
 	} else if !errors.Is(err, errdefs.ErrNotFound) {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *ContainerdJudgeServiceServer) withFreshTask(
 	}
 	defer func() {
 		// todo: check task status
-		_ = c.killTask(ctx, t)
+		_ = c.killProcess(ctx, t)
 	}()
 
 	// make sure we wait before calling start

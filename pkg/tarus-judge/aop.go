@@ -6,7 +6,10 @@ import (
 )
 
 type TransientJudgeRequest struct {
-	ImageId string
+	ImageId    string
+	ProgramBin string
+
+	// Pause      JudgeInfra
 }
 
 func WithContainerEnvironment(
