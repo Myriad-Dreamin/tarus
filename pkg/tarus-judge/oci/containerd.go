@@ -7,15 +7,19 @@ import (
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
+	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/pkg/errors"
+	"go.etcd.io/bbolt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -26,22 +30,48 @@ var fixedContainerId = "tarus-engine0"
 
 type ContainerdJudgeServiceServer struct {
 	tarus.UnimplementedJudgeServiceServer
-	client *containerd.Client
+	client       *containerd.Client
+	sessionStore tarus_store.JudgeSessionStore
+	closers      []io.Closer
 }
 
-func NewContainerdServer() (*ContainerdJudgeServiceServer, error) {
-	client, err := containerd.New("/run/containerd/containerd.sock",
+func NewContainerdServer() (svc *ContainerdJudgeServiceServer, err error) {
+	svc = &ContainerdJudgeServiceServer{}
+
+	svc.client, err = containerd.New("/run/containerd/containerd.sock",
 		containerd.WithDefaultNamespace("tarus"))
 	if err != nil {
-		return nil, err
+		return
 	}
-	return &ContainerdJudgeServiceServer{
-		client: client,
-	}, nil
+
+	svc.closers = append(svc.closers, svc.client)
+	defer func() {
+		if err != nil {
+			_ = svc.Close()
+		}
+	}()
+
+	b, err := bbolt.Open("./test.db", os.FileMode(0644), nil)
+	if err != nil {
+		return
+	}
+	svc.sessionStore = tarus_store.NewJudgeSessionStore(tarus_store.NewDB(b))
+	if svc.sessionStore == nil {
+		err = errors.Wrapf(errdefs.ErrInvalidArgument, "session store not filled")
+		return
+	}
+
+	if c, ok := svc.sessionStore.(io.Closer); ok {
+		svc.closers = append(svc.closers, c)
+	}
+	return
 }
 
 func (c *ContainerdJudgeServiceServer) Close() error {
-	return c.client.Close()
+	for i := range c.closers {
+		_ = c.closers[i].Close()
+	}
+	return nil
 }
 
 func (c *ContainerdJudgeServiceServer) Handshake(ctx context.Context, request *tarus.HandshakeRequest) (*emptypb.Empty, error) {
@@ -104,6 +134,18 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 	if container == nil {
 		return nil, status.Error(codes.Internal, "container not created when successfully returning")
 	}
+
+	var session = tarus.OCIJudgeSession{
+		CommitStatus: 0,
+		ContainerId:  fixedContainerId,
+		BinTarget:    "/workdir/echo_test",
+		HostWorkdir:  "/workdir",
+	}
+	err = c.sessionStore.SetJudgeSession(ctx, request.TaskKey, &session)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
