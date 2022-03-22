@@ -25,8 +25,6 @@ func NewJudgeSessionStore(db *DB) JudgeSessionStore {
 const MinTimestamp = -62135596800
 
 func (j *judgeSessionStore) SetJudgeSession(ctx context.Context, key []byte, meta *tarus.OCIJudgeSession) error {
-	j.l.RLock()
-	defer j.l.RUnlock()
 	if err := update(ctx, j.db, func(tx *bolt.Tx) error {
 		bkt, err := getOrCreateSessionBucket(tx, key)
 		if err != nil {
@@ -62,6 +60,30 @@ func (j *judgeSessionStore) GetJudgeSession(ctx context.Context, key []byte) (*t
 	}
 
 	return info, nil
+}
+
+func (j *judgeSessionStore) FinishSession(ctx context.Context, key []byte, transactionCb func() error) error {
+	if err := update(ctx, j.db, func(tx *bolt.Tx) error {
+		bkt := getSessionBucket(tx, key)
+		if bkt == nil {
+			return errors.Wrapf(errdefs.ErrNotFound, "session key %v", key)
+		}
+		var meta tarus.OCIJudgeSession
+		err := readSession(&meta, bkt)
+		if err != nil {
+			return err
+		}
+
+		meta.UpdatedAt = timestamppb.New(time.Now().UTC())
+		meta.CommitStatus = CommitStatusFinished
+		if err = transactionCb(); err != nil {
+			return err
+		}
+		return writeSession(&meta, bkt)
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func readSessionTimestamp(meta *tarus.OCIJudgeSession, bkt *bolt.Bucket) error {

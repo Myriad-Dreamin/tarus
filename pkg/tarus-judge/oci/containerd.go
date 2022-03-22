@@ -155,8 +155,15 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 	if err != nil {
 		return nil, err
 	}
-	err = cc.Delete(ctx, containerd.WithSnapshotCleanup)
-	return nil, err
+
+	err = c.sessionStore.FinishSession(ctx, request.TaskKey, func() error {
+		return cc.Delete(ctx, containerd.WithSnapshotCleanup)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*emptypb.Empty, error) {
