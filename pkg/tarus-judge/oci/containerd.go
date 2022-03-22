@@ -1,15 +1,14 @@
 package oci_judge
 
 import (
-	"bytes"
 	context "context"
 	"encoding/hex"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	tarus_io "github.com/Myriad-Dreamin/tarus/pkg/tarus-io"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
@@ -33,10 +32,13 @@ type ContainerdJudgeServiceServer struct {
 	client       *containerd.Client
 	sessionStore tarus_store.JudgeSessionStore
 	closers      []io.Closer
+	ioRouter     tarus_io.Router
 }
 
 func NewContainerdServer() (svc *ContainerdJudgeServiceServer, err error) {
-	svc = &ContainerdJudgeServiceServer{}
+	svc = &ContainerdJudgeServiceServer{
+		ioRouter: tarus_io.Statics,
+	}
 
 	svc.client, err = containerd.New("/run/containerd/containerd.sock",
 		containerd.WithDefaultNamespace("tarus"))
@@ -178,43 +180,69 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 		if err != nil {
 			return err
 		}
+		procTmpl := *spec.Process
 
-		procOpts := spec.Process
-		procOpts.Terminal = false
-		procOpts.Args = []string{"/workdir/echo_test"}
-
-		var b = bytes.NewBuffer([]byte{})
-		process, err := t.Exec(ctx, "judge_exec", procOpts, cio.NewCreator(cio.WithStreams(bytes.NewReader(nil), b, os.Stderr)))
-		if err != nil {
-			return err
-		}
-		defer func() {
-			_, _ = process.Delete(ctx)
-		}()
-
-		statusC, err := process.Wait(ctx)
+		session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
 		if err != nil {
 			return err
 		}
 
-		if err := process.Start(ctx); err != nil {
-			return err
-		}
-		defer func() {
-			// todo: check process status
-			_ = c.killProcess(ctx, process)
-		}()
+		for i := range request.Items {
+			var judgePoint = request.Items[i]
+			procOpts := procTmpl
+			procOpts.Terminal = false
+			procOpts.Args = []string{session.BinTarget}
 
-		select {
-		case st := <-statusC:
-			code, _, err := st.Result()
+			ioc, err := c.ioRouter.MakeIOChannel(judgePoint.IoProvider)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("linux container exit: %v\n", code)
-			fmt.Printf("judge output: %v", b.String())
-		case <-time.After(time.Second * 3):
-			fmt.Printf("linux container timeout stop\n")
+
+			fac, err := ioc(judgePoint.InputUrl, judgePoint.OutputUrl)
+			if err != nil {
+				return err
+			}
+
+			err = (func() error {
+				process, err := t.Exec(ctx, "judge_exec", &procOpts, fac.AsCreator())
+				if err != nil {
+					return err
+				}
+				defer func() {
+					_, _ = process.Delete(ctx)
+				}()
+
+				statusC, err := process.Wait(ctx)
+				if err != nil {
+					return err
+				}
+
+				if err := process.Start(ctx); err != nil {
+					return err
+				}
+				defer func() {
+					// todo: check process status
+					_ = c.killProcess(ctx, process)
+				}()
+
+				select {
+				case st := <-statusC:
+					code, _, err := st.Result()
+					if err != nil {
+						return err
+					}
+					fmt.Printf("linux container exit: %v\n", code)
+					s, err := fac.GetJudgeResult()
+					fmt.Printf("judge result: %v %v\n", s, err)
+				case <-time.After(time.Second * 3):
+					fmt.Printf("linux container timeout stop\n")
+				}
+
+				return nil
+			})()
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -263,6 +291,7 @@ func (c *ContainerdJudgeServiceServer) TransientJudge(rawCtx context.Context, re
 
 	return tarus_judge.WithContainerEnvironment(c, rawCtx, req, func(rawCtx context.Context, req *tarus_judge.TransientJudgeRequest) error {
 		_, err := c.MakeJudge(rawCtx, &tarus.MakeJudgeRequest{
+			TaskKey: req.TaskKey,
 			Items:   req.Items,
 			IsAsync: false,
 		})
