@@ -24,3 +24,8 @@ type CompilerSerial struct {
 	Version  string
 	Features [][2]string
 }
+
+const (
+	CompileTargetUnknown = iota
+	CompileTargetDefault
+)
