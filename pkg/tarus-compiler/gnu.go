@@ -8,11 +8,6 @@ import (
 	"strings"
 )
 
-type GnuCompiler struct {
-	SystemToolchain CompilerSerial
-	Toolchains      map[int][]CompilerSerial
-}
-
 func getSystemGnuToolchain() (CompilerSerial, error) {
 	var compiler = gnuCompiler{}
 	if err := compiler.detect("/usr"); err != nil {
@@ -23,13 +18,13 @@ func getSystemGnuToolchain() (CompilerSerial, error) {
 	return compiler.c, nil
 }
 
-func GetSystemGnu() *GnuCompiler {
+func GetSystemGnu() *MultiVerCompiler {
 	toolchain, err := getSystemGnuToolchain()
 	if err != nil {
 		return nil
 	}
 
-	return &GnuCompiler{
+	return &MultiVerCompiler{
 		SystemToolchain: toolchain,
 	}
 }
@@ -37,6 +32,7 @@ func GetSystemGnu() *GnuCompiler {
 type gnuCompiler struct {
 	c     CompilerSerial
 	Patch int
+	GCC   string
 }
 
 func (g gnuCompiler) Compile(args *CompilerArgs) (CompilerResponse, error) {
@@ -67,6 +63,7 @@ func (g gnuCompiler) detect(s string) error {
 		g.c.Major = major
 		g.c.Minor = minor
 		g.Patch = patch
+		g.GCC = gcc
 		return nil
 	}
 
