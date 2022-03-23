@@ -9,7 +9,7 @@ import (
 )
 
 func getSystemGnuToolchain() (CompilerSerial, error) {
-	var compiler = gnuCompiler{}
+	var compiler = &gnuCompiler{}
 	if err := compiler.detect("/usr"); err != nil {
 		return CompilerSerial{}, err
 	}
@@ -35,11 +35,11 @@ type gnuCompiler struct {
 	GCC   string
 }
 
-func (g gnuCompiler) Compile(args *CompilerArgs) (CompilerResponse, error) {
+func (g *gnuCompiler) Compile(args *CompilerArgs) (CompilerResponse, error) {
 	return CompilerResponse{}, errdefs.ErrNotImplemented
 }
 
-func (g gnuCompiler) detect(s string) error {
+func (g *gnuCompiler) detect(s string) error {
 	gcc := filepath.Join(s, "bin/gcc")
 	if exists(gcc) {
 		v, err := output(gcc, "--version")
