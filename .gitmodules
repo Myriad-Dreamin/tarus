@@ -1,0 +1,3 @@
+[submodule "third_party/testlib"]
+	path = third_party/testlib
+	url = https://github.com/MikeMirzayanov/testlib
