@@ -1,7 +1,9 @@
 .idea
 
 data
+vendor
 
 *.db
 *.tar
 *.log
+
