@@ -38,12 +38,21 @@ func main() {
 				InputUrl:   hexUrl(``),
 				OutputUrl:  hexUrl(`hello world`),
 			},
-			//{
-			//	JudgeKey:   []byte("001"),
-			//	IoProvider: "memory",
-			//	InputUrl:   hexUrl(`1 2`),
-			//	OutputUrl:  hexUrl(`3`),
-			//},
+		},
+	}); err != nil {
+		panic(err)
+	}
+
+	if err = client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+		ImageId:   "docker.io/library/ubuntu:20.04",
+		BinTarget: "/workdir/io_test",
+		Items: []*tarus.MakeJudgeItem{
+			{
+				JudgeKey:   []byte("001"),
+				IoProvider: "memory",
+				InputUrl:   hexUrl("1 2\n"),
+				OutputUrl:  hexUrl(`3`),
+			},
 		},
 	}); err != nil {
 		panic(err)
