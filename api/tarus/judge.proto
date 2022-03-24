@@ -14,9 +14,11 @@ message HandshakeRequest {
 message CreateContainerRequest {
   bytes task_key = 1;
   string image_id = 2;
-  int64 estimated_timeout = 101;
-  int64 estimated_memory = 102;
-  string bin_target = 103;
+  string bin_target = 101;
+  int64 estimated_cputime = 102;
+  int64 estimated_cpuhard = 103;
+  int64 estimated_memory = 104;
+  int64 estimated_stack = 105;
 }
 
 message RemoveContainerRequest {
@@ -36,8 +38,10 @@ message MakeJudgeItem {
   string input_url = 3;
   // stdout
   string output_url = 4;
-  int64 estimated_timeout = 101;
-  int64 estimated_memory = 102;
+  int64 estimated_cputime = 101;
+  int64 estimated_cpuhard = 102;
+  int64 estimated_memory = 103;
+  int64 estimated_stack = 104;
 }
 
 message MakeJudgeRequest {
@@ -51,12 +55,68 @@ message QueryJudgeRequest {
   bytes judge_key = 2;
 }
 
+// status in range [0, 1024) are reserved.
+enum JudgeStatus {
+  // never show in a correct response
+  Unknown = 0;
+
+  // traditional judge status, [0, 101) are reserved for judging programs.
+  // accepted by checker
+  Accepted = 1;
+  // rejected by checker
+  WrongAnswer = 2;
+  // almost right but take subtle format error.
+  PresentationError = 3;
+
+  // The program throws some exception, sends a signal or gets a memory error such as segmentation fault.
+  RuntimeError = 4;
+  // The program tries to consume more memory than is indicated in the problem statement.
+  MemoryLimitExceed = 5;
+  // The program hadn't terminated in time indicated in the problem statement.
+  TimeLimitExceed = 6;
+  // The program touch the limit on output buffer size.
+  OutputLimitExceed = 7;
+
+  // if true, the points got from hint
+  // for example:
+  // ```
+  // status: PartialResult
+  // hint:
+  //   points: 80
+  //   message: 3 of 4 tasks passed
+  // ```
+  PartialResult = 8;
+  // this status are not from runtime container, but can be returned from the JudgeService for convenience.
+  //   (consider that the judge result storage can also make a response for tarus.api.judge.QueryJudge api)
+  CompilationError = 9;
+  // for not finished request.
+  Running = 10;
+
+  // traditional judge status, [101, 201) are reserved for judge services.
+  // for internal error.
+  SystemError = 101;
+  // for security detection.
+  SecurityPolicyViolation = 102;
+  // crashing the judge checker, for the problem writers :)
+  JudgeCheckerException = 103;
+
+}
+
 message QueryJudgeItem {
   bytes judge_key = 1;
   int64 time_use = 101;
   int64 memory_use = 102;
-  int64 judge_result = 103;
-  string hint = 104;
+  JudgeStatus status = 103;
+  // customized message here, most likely return something special for judge server
+  // some possible fields including:
+  //  points: subtask bonus
+  //  message: compilation error
+  //  signal: memory error, floating point exception, etc.
+  //  checker: asan report, seccomp violation, etc.
+  // if you are looking for attaching the listed properties, please encode them into the `hint` field.
+  bytes hint = 104;
+
+  // type your_extension on query judge item = 1001...;
 }
 
 message QueryJudgeResponse {
