@@ -29,10 +29,10 @@ func StrictMatch(r io.Reader) io.Writer {
 	return &StrictMatcher{r: r, pos: 0}
 }
 
-func (m *StrictMatcher) GetJudgeResult() (string, error) {
+func (m *StrictMatcher) GetJudgeResult() ([]byte, error) {
 	q := fmt.Sprintf("matched: %v", m.pos)
 	// todo: read again
-	return q, nil
+	return []byte(q), nil
 }
 
 func (m *StrictMatcher) Write(p []byte) (n int, err error) {

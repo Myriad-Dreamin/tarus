@@ -10,7 +10,7 @@ func NewStd(inp io.Reader, oup io.Writer, erp io.Writer) Factory {
 		erp = io.Discard
 	}
 
-	if j, ok := oup.(R); ok {
+	if j, ok := oup.(JudgeChecker); ok {
 		return NopCIO2(cio.NewCreator(cio.WithStreams(inp, oup, erp)), j)
 	}
 	return NopCIO(cio.NewCreator(cio.WithStreams(inp, oup, erp)))
