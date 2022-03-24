@@ -26,14 +26,40 @@ message CreateContainerRequest {
   int64 estimated_stack = 105;
 }
 
+message BundleContainerRequest {
+  bytes task_key = 1;
+}
+
 message RemoveContainerRequest {
   bytes task_key = 1;
+}
+
+message CloneContainerRequest {
+  bytes task_key = 1;
+  string from_task_key = 2;
+  string from_container_id = 3;
+}
+
+message CheckContainerRequest {
+  string plugin = 1;
+  bytes task_key = 2;
+  string container_id = 3;
+  bytes extras = 4;
 }
 
 message CopyRequest {
   bytes task_key = 1;
   string from_url = 2;
   string to_path = 3;
+}
+
+message CompileProgramRequest {
+  bytes task_key = 1;
+  string from_url = 2;
+  string to_path = 3;
+  string compile_target = 101;
+  // temporal open or close several compile flags such as asan, O0, O1, O2, O3
+  repeated string compile_features = 102;
 }
 
 message MakeJudgeItem {
@@ -128,11 +154,33 @@ message QueryJudgeResponse {
   repeated QueryJudgeItem items = 1;
 }
 
+// internal judge service, containing low level operations, hence requires privilege
 service JudgeService {
   rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
+
+  // Environment Management
+  // Create
   rpc CreateContainer(CreateContainerRequest) returns (google.protobuf.Empty);
-  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  // Bundle
+  rpc BundleContainer(BundleContainerRequest) returns (google.protobuf.Empty);
+  // Remove
   rpc RemoveContainer(RemoveContainerRequest) returns (google.protobuf.Empty);
+  // Clone
+  rpc CloneContainer(CloneContainerRequest) returns (google.protobuf.Empty);
+  // Check (single container or list container)
+  // simple debugging. don't design complex plugin on it...
+  rpc CheckContainer(CheckContainerRequest) returns (google.protobuf.Empty);
+
+  // Judge Program (Compile it).
+  //   please notice that the container environment is prepared by container bundle.
+  // copy binary is dangerous, but one can use this api to upload program.
+  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  // compile by the judge service with security checking
+  rpc CompileProgram(CompileProgramRequest) returns (google.protobuf.Empty);
+
+  // Judge Program (Run it).
+  // Judge multiple times.
   rpc MakeJudge(MakeJudgeRequest) returns (google.protobuf.Empty);
+  // Query.
   rpc QueryJudge(QueryJudgeRequest) returns (QueryJudgeResponse);
 }
