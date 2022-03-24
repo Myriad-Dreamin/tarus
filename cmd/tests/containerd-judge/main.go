@@ -57,4 +57,19 @@ func main() {
 	}); err != nil {
 		panic(err)
 	}
+
+	if err = client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+		ImageId:   "docker.io/library/ubuntu:20.04",
+		BinTarget: "/workdir/echo_input_test",
+		Items: []*tarus.MakeJudgeItem{
+			{
+				JudgeKey:   []byte("001"),
+				IoProvider: "memory",
+				InputUrl:   hexUrl("yes\n"),
+				OutputUrl:  hexUrl(`yes`),
+			},
+		},
+	}); err != nil {
+		panic(err)
+	}
 }
