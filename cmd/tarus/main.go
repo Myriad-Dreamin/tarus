@@ -31,7 +31,6 @@ var feature = fmt.Sprintf(`Current online features are listed following:
 )
 
 func main() {
-	fmt.Println("hello world")
 	app := cli.NewApp()
 	app.Name = "tarus"
 	app.Usage = "Online Judge Engine Powered by runC, gVisor and other execution runtime."
