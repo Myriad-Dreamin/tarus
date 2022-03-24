@@ -16,6 +16,7 @@ message CreateContainerRequest {
   string image_id = 2;
   int64 estimated_timeout = 101;
   int64 estimated_memory = 102;
+  string bin_target = 103;
 }
 
 message RemoveContainerRequest {

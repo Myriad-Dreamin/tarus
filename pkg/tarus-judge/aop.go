@@ -19,6 +19,8 @@ func WithContainerEnvironment(
 	_, err = c.CreateContainer(rawCtx, &tarus.CreateContainerRequest{
 		ImageId: req.ImageId,
 		TaskKey: req.TaskKey,
+
+		BinTarget: req.BinTarget,
 	})
 	if err != nil {
 		return err

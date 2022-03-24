@@ -140,7 +140,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 	var session = tarus.OCIJudgeSession{
 		CommitStatus: 0,
 		ContainerId:  fixedContainerId,
-		BinTarget:    "/workdir/echo_test",
+		BinTarget:    request.GetBinTarget(),
 		HostWorkdir:  "/workdir",
 	}
 	err = c.sessionStore.SetJudgeSession(ctx, request.TaskKey, &session)
