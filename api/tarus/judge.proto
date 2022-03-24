@@ -11,6 +11,11 @@ message HandshakeRequest {
   string web_hook_url = 101;
 }
 
+message HandshakeResponse {
+  // you can pull the judge status mapping if inconsistent
+  string judge_status_hash = 1;
+}
+
 message CreateContainerRequest {
   bytes task_key = 1;
   string image_id = 2;
@@ -124,7 +129,7 @@ message QueryJudgeResponse {
 }
 
 service JudgeService {
-  rpc Handshake(HandshakeRequest) returns (google.protobuf.Empty);
+  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
   rpc CreateContainer(CreateContainerRequest) returns (google.protobuf.Empty);
   rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
   rpc RemoveContainer(RemoveContainerRequest) returns (google.protobuf.Empty);

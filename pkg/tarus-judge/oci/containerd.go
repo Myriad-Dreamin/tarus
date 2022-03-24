@@ -76,7 +76,7 @@ func (c *ContainerdJudgeServiceServer) Close() error {
 	return nil
 }
 
-func (c *ContainerdJudgeServiceServer) Handshake(ctx context.Context, request *tarus.HandshakeRequest) (*emptypb.Empty, error) {
+func (c *ContainerdJudgeServiceServer) Handshake(ctx context.Context, request *tarus.HandshakeRequest) (*tarus.HandshakeResponse, error) {
 	return c.UnimplementedJudgeServiceServer.Handshake(ctx, request)
 }
 
