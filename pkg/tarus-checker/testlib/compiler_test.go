@@ -1,4 +1,4 @@
-package testlib_frontend
+package testlib_checker
 
 import (
 	tarus_compiler "github.com/Myriad-Dreamin/tarus/pkg/tarus-compiler"
