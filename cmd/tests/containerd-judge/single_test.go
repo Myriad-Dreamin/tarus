@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	oci_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge/oci"
-	"os"
 	"sync/atomic"
 	"testing"
 )
@@ -13,7 +11,7 @@ var client *oci_judge.ContainerdJudgeServiceServer
 
 func init() {
 	var err error
-	_ = os.Chdir("../../../")
+	// _ = os.Chdir("../../../")
 
 	client, err = oci_judge.NewContainerdServer()
 	if err != nil {
@@ -29,5 +27,4 @@ func BenchmarkEcho(b *testing.B) {
 			echoTest(client, ctx)
 		}
 	})
-	fmt.Println("perf", oci_judge.PerfTime)
 }
