@@ -12,8 +12,16 @@ message HandshakeRequest {
 }
 
 message HandshakeResponse {
+  bytes api_version = 1;
   // you can pull the judge status mapping if inconsistent
-  string judge_status_hash = 1;
+  string judge_status_hash = 2;
+  // Simplest Judge Service Only implements 3 api:
+  //   CreateContainer
+  //   RemoveContainer
+  //   QueryJudge
+  // special string:
+  //   All: implemented all apis in this version
+  repeated string implemented_apis = 3;
 }
 
 message CreateContainerRequest {
