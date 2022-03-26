@@ -3,6 +3,7 @@ package oci_judge
 import (
 	context "context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	tarus_io "github.com/Myriad-Dreamin/tarus/pkg/tarus-io"
@@ -170,9 +171,7 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 	return nil, nil
 }
 
-var PerfTime = time.Duration(0)
-
-func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*emptypb.Empty, error) {
+func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*tarus.MakeJudgeResponse, error) {
 	ctx := namespaces.WithNamespace(rawCtx, "tarus")
 
 	fixedContainerId := "tarus-engine-snapshot0"
@@ -180,8 +179,9 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 	if err != nil {
 		return nil, err
 	}
+
+	var resp = new(tarus.MakeJudgeResponse)
 	for i := range request.Items {
-		var x = time.Now()
 		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
 			// fmt.Printf("linux container create successfully\n")
 			s, err := cc.Spec(ctx)
@@ -224,6 +224,7 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 					return err
 				}
 
+				var processStartTime = time.Now()
 				if err := process.Start(ctx); err != nil {
 					return err
 				}
@@ -234,34 +235,51 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 
 				select {
 				case st := <-statusC:
-					code, _, err := st.Result()
+					var qr = &tarus.QueryJudgeItem{
+						JudgeKey: judgePoint.JudgeKey,
+					}
+					var jh JudgeHint
+					code, exitedAt, err := st.Result()
 					if err != nil {
 						return err
 					}
-					_ = code
-					// fmt.Printf("linux container exit: %v\n", code)
+					jh.Code = int(code)
+					qr.TimeUseHard = int64(exitedAt.Sub(processStartTime) * time.Nanosecond)
+
 					s, err := fac.GetJudgeResult()
 					if err != nil {
 						return err
 					}
-					_ = s
-					// fmt.Printf("judge result: %v %v\n", string(s), err)
+					jh.CheckerResult = string(s)
 
 					m, err := t.Metrics(rawCtx)
 					if err != nil {
 						return err
 					}
-					_ = m
 
-					fmt.Printf(m.Data.TypeUrl)
-
-					var m2 = v1.Metrics{}
-					err = typeurl.UnmarshalTo(m.Data, &m2)
+					m0, err := typeurl.UnmarshalAny(m.Data)
 					if err != nil {
 						return err
 					}
-					fmt.Printf("metrics cpu result: %v %v %v\n", m2.CPU.Usage.Total, m2.CPU.Usage.Kernel, m2.CPU.Usage.User)
-					fmt.Printf("metrics memory result: %v %v %v\n", m2.Memory.Usage.Max, m2.Memory.Usage.Usage, m2.Memory.RSS)
+					if m2, ok := m0.(*v1.Metrics); ok {
+						//fmt.Printf("metrics cpu result: %v %v %v\n", m2.CPU.Usage.Total, m2.CPU.Usage.Kernel, m2.CPU.Usage.User)
+						//fmt.Printf("metrics memory result: %v %v %v\n", m2.Memory.Usage.Max, m2.Memory.Usage.Usage, m2.Memory.RSS)
+						qr.TimeUse = int64(m2.CPU.Usage.User)
+						qr.MemoryUse = int64(m2.Memory.Usage.Max)
+					} else {
+						fmt.Println("invalid type url for extracting metrics", m.Data.TypeUrl)
+					}
+
+					qr.Hint, err = json.Marshal(jh)
+					if err != nil {
+						return err
+					}
+
+					qr.Status, err = fac.GetJudgeStatus(s)
+					if err != nil {
+						return err
+					}
+					resp.Items = append(resp.Items, qr)
 				case <-time.After(time.Second * 3):
 					fmt.Printf("linux container timeout stop\n")
 				}
@@ -277,10 +295,9 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 		if err != nil {
 			return nil, err
 		}
-		PerfTime += time.Now().Sub(x)
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (c *ContainerdJudgeServiceServer) QueryJudge(ctx context.Context, request *tarus.QueryJudgeRequest) (*tarus.QueryJudgeResponse, error) {
@@ -319,12 +336,18 @@ func (c *ContainerdJudgeServiceServer) TransientJudge(rawCtx context.Context, re
 	}
 
 	return tarus_judge.WithContainerEnvironment(c, rawCtx, req, func(rawCtx context.Context, req *tarus_judge.TransientJudgeRequest) error {
-		_, err := c.MakeJudge(rawCtx, &tarus.MakeJudgeRequest{
+		resp, err := c.MakeJudge(rawCtx, &tarus.MakeJudgeRequest{
 			TaskKey: req.TaskKey,
 			Items:   req.Items,
 			IsAsync: false,
 		})
+		if err != nil {
+			return err
+		}
 
-		return err
+		for i := range resp.Items {
+			fmt.Println("resp", i, resp.Items[i])
+		}
+		return nil
 	})
 }

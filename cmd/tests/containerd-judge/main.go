@@ -59,7 +59,7 @@ func sleepHardTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.C
 				OutputUrl:  hexUrl(`hello world`),
 			},
 			{
-				JudgeKey:   []byte("001"),
+				JudgeKey:   []byte("002"),
 				IoProvider: "memory",
 				InputUrl:   hexUrl(``),
 				OutputUrl:  hexUrl(`hello world`),

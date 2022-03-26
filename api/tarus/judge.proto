@@ -81,6 +81,19 @@ message MakeJudgeRequest {
   bool is_async = 101;
 }
 
+message MakeJudgeResponse {
+  // empty if is_async == true
+  repeated QueryJudgeItem items = 1;
+
+  // experimental fields
+  // serving == len(requests) - (waiting + len(items))
+  int32 waiting = 101;
+  // experimental fields
+  // the service is likely recover at the time (time.Now() + qos_wait * time.Millisecond)
+  // the qos is disabled if qos_wait == 0
+  int32 qos_wait = 102;
+}
+
 message QueryJudgeRequest {
   bytes task_key = 1;
   bytes judge_key = 2;
@@ -135,9 +148,9 @@ enum JudgeStatus {
 
 message QueryJudgeItem {
   bytes judge_key = 1;
-  int64 time_use = 101;
-  int64 memory_use = 102;
-  JudgeStatus status = 103;
+  int64 time_use = 2;
+  int64 memory_use = 3;
+  JudgeStatus status = 4;
   // customized message here, most likely return something special for judge server
   // some possible fields including:
   //  points: subtask bonus
@@ -145,7 +158,8 @@ message QueryJudgeItem {
   //  signal: memory error, floating point exception, etc.
   //  checker: asan report, seccomp violation, etc.
   // if you are looking for attaching the listed properties, please encode them into the `hint` field.
-  bytes hint = 104;
+  bytes hint = 101;
+  int64 time_use_hard = 102;
 
   // type your_extension on query judge item = 1001...;
 }
@@ -180,7 +194,11 @@ service JudgeService {
 
   // Judge Program (Run it).
   // Judge multiple times.
-  rpc MakeJudge(MakeJudgeRequest) returns (google.protobuf.Empty);
+  // The judge service MUST accept all judge requests, and indicates the congestion by `MakeJudgeResponse.waiting`.
+  // One user should place a high priority request before other requests in `MakeJudgeRequest.items`.
+  // One user can cancel the waiting request in time.
+  // The synchronized request will not block a service if it comes to the waiting status.
+  rpc MakeJudge(MakeJudgeRequest) returns (MakeJudgeResponse);
   // Query.
   rpc QueryJudge(QueryJudgeRequest) returns (QueryJudgeResponse);
 }

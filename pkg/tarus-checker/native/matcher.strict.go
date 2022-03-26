@@ -2,6 +2,7 @@ package native_judge
 
 import (
 	"fmt"
+	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	"io"
 )
 
@@ -33,6 +34,10 @@ func (m *StrictMatcher) GetJudgeResult() ([]byte, error) {
 	q := fmt.Sprintf("matched: %v", m.pos)
 	// todo: read again
 	return []byte(q), nil
+}
+
+func (m *StrictMatcher) GetJudgeStatus(_ []byte) (tarus.JudgeStatus, error) {
+	return tarus.JudgeStatus_Accepted, nil
 }
 
 func (m *StrictMatcher) Write(p []byte) (n int, err error) {

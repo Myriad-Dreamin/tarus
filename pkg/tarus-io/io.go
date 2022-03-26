@@ -1,9 +1,13 @@
 package tarus_io
 
-import "github.com/containerd/containerd/cio"
+import (
+	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	"github.com/containerd/containerd/cio"
+)
 
 type JudgeChecker interface {
 	GetJudgeResult() ([]byte, error)
+	GetJudgeStatus(b []byte) (tarus.JudgeStatus, error)
 }
 
 type Factory interface {
@@ -25,6 +29,13 @@ func (n nopCio) GetJudgeResult() ([]byte, error) {
 		return n.r.GetJudgeResult()
 	}
 	return nil, nil
+}
+
+func (n nopCio) GetJudgeStatus(b []byte) (tarus.JudgeStatus, error) {
+	if n.r != nil {
+		return n.r.GetJudgeStatus(b)
+	}
+	return tarus.JudgeStatus_Unknown, nil
 }
 
 func NopCIO(c cio.Creator) Factory {

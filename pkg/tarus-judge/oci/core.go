@@ -18,3 +18,8 @@ type MemoryJudgeConfig struct {
 	Timeout     int64 // in microsecond
 	Memory      int64 // in bytes
 }
+
+type JudgeHint struct {
+	Code          int    `json:"code" yaml:"code"`
+	CheckerResult string `json:"checker_result" yaml:"checker_result"`
+}
