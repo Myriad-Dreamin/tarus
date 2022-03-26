@@ -10,8 +10,10 @@ import (
 	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
+	v1 "github.com/containerd/containerd/metrics/types/v1"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
+	"github.com/containerd/typeurl"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -24,8 +26,6 @@ import (
 	"path/filepath"
 	"time"
 )
-
-var fixedContainerId = "tarus-engine0"
 
 type ContainerdJudgeServiceServer struct {
 	tarus.UnimplementedJudgeServiceServer
@@ -91,7 +91,8 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 		return nil, err
 	}
 
-	fixedContainerSnapshotId := "tarus-engine-snapshot0"
+	fixedContainerId := fmt.Sprintf("tarus-engine-snapshot%d", 0)
+	fixedContainerSnapshotId := fmt.Sprintf("tarus-engine-snapshot%d", 0)
 
 	if err = c.client.SnapshotService(snapshotter).Remove(ctx, fixedContainerSnapshotId); err != nil && !errdefs.IsNotFound(err) {
 		return nil, err
@@ -153,6 +154,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 
 func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, request *tarus.RemoveContainerRequest) (*emptypb.Empty, error) {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
+	fixedContainerId := fmt.Sprintf("tarus-engine-snapshot%d", 0)
 	cc, err := c.client.LoadContainer(ctx, fixedContainerId)
 	if err != nil {
 		return nil, err
@@ -168,26 +170,31 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 	return nil, nil
 }
 
+var PerfTime = time.Duration(0)
+
 func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*emptypb.Empty, error) {
 	ctx := namespaces.WithNamespace(rawCtx, "tarus")
+
+	fixedContainerId := "tarus-engine-snapshot0"
 	cc, err := c.client.LoadContainer(ctx, fixedContainerId)
 	if err != nil {
 		return nil, err
 	}
-	err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
-		fmt.Printf("linux container create successfully\n")
-		spec, err := cc.Spec(ctx)
-		if err != nil {
-			return err
-		}
-		procTmpl := *spec.Process
+	for i := range request.Items {
+		var x = time.Now()
+		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
+			// fmt.Printf("linux container create successfully\n")
+			s, err := cc.Spec(ctx)
+			if err != nil {
+				return err
+			}
+			procTmpl := *s.Process
 
-		session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
-		if err != nil {
-			return err
-		}
+			session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
+			if err != nil {
+				return err
+			}
 
-		for i := range request.Items {
 			var judgePoint = request.Items[i]
 			procOpts := procTmpl
 			procOpts.Terminal = false
@@ -231,9 +238,30 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 					if err != nil {
 						return err
 					}
-					fmt.Printf("linux container exit: %v\n", code)
+					_ = code
+					// fmt.Printf("linux container exit: %v\n", code)
 					s, err := fac.GetJudgeResult()
-					fmt.Printf("judge result: %v %v\n", s, err)
+					if err != nil {
+						return err
+					}
+					_ = s
+					// fmt.Printf("judge result: %v %v\n", string(s), err)
+
+					m, err := t.Metrics(rawCtx)
+					if err != nil {
+						return err
+					}
+					_ = m
+
+					fmt.Printf(m.Data.TypeUrl)
+
+					var m2 = v1.Metrics{}
+					err = typeurl.UnmarshalTo(m.Data, &m2)
+					if err != nil {
+						return err
+					}
+					fmt.Printf("metrics cpu result: %v %v %v\n", m2.CPU.Usage.Total, m2.CPU.Usage.Kernel, m2.CPU.Usage.User)
+					fmt.Printf("metrics memory result: %v %v %v\n", m2.Memory.Usage.Max, m2.Memory.Usage.Usage, m2.Memory.RSS)
 				case <-time.After(time.Second * 3):
 					fmt.Printf("linux container timeout stop\n")
 				}
@@ -243,12 +271,13 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 			if err != nil {
 				return err
 			}
-		}
 
-		return nil
-	})
-	if err != nil {
-		return nil, err
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		PerfTime += time.Now().Sub(x)
 	}
 
 	return nil, nil

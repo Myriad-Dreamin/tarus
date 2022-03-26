@@ -1,7 +1,7 @@
 
-io_test: io_test.cc
+io_test: programs/io_test.cc
 	$(CXX) $< -o $@
 
-echo_test: echo_test.cc
+echo_test: programs/echo_test.cc
 	$(CXX) $< -o $@
 

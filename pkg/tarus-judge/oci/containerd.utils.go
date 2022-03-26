@@ -67,7 +67,8 @@ func (c *ContainerdJudgeServiceServer) killProcess(ctx context.Context, t contai
 	if err != nil {
 		return err
 	}
-	fmt.Printf("linux container exited with status: %d, %v\n", code, st)
+	_ = code
+	// fmt.Printf("linux container exited with status: %d, %v\n", code, st)
 	return nil
 }
 
