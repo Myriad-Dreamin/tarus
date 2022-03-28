@@ -1,7 +1,6 @@
 package testlib_checker
 
 import (
-	"fmt"
 	tarus_compiler "github.com/Myriad-Dreamin/tarus/pkg/tarus-compiler"
 )
 
@@ -11,7 +10,7 @@ type Compiler struct {
 }
 
 func (c *Compiler) CompileChecker(checkerSource string, checkerBin string) error {
-	j, err := c.C.Compile(&tarus_compiler.CompilerArgs{
+	_, err := c.C.Compile(&tarus_compiler.CompilerArgs{
 		CompileTarget: tarus_compiler.CompileTargetDefault,
 		CompiledRole:  "judge",
 		Args: []string{
@@ -22,6 +21,5 @@ func (c *Compiler) CompileChecker(checkerSource string, checkerBin string) error
 		},
 		Environments: nil,
 	})
-	fmt.Println(j)
 	return err
 }
