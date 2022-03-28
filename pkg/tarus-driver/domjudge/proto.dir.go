@@ -72,7 +72,7 @@ func CreateLocalJudgeRequest(fsArchive string) (req *tarus.MakeJudgeRequest, _ e
 		return nil, err
 	}
 	req = new(tarus.MakeJudgeRequest)
-	req.IoProvider = fmt.Sprintf("flle://%s", fsArchive)
+	req.IoProvider = fmt.Sprintf("file://%s", fsArchive)
 	req.Testcases = testcases
 
 	return req, nil
