@@ -200,7 +200,12 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 			procOpts.Terminal = false
 			procOpts.Args = []string{session.BinTarget}
 
-			ioc, err := c.ioRouter.MakeIOChannel(judgePoint.IoProvider)
+			var ioProvider = judgePoint.IoProvider
+			if len(ioProvider) == 0 {
+				ioProvider = request.IoProvider
+			}
+
+			ioc, err := c.ioRouter.MakeIOChannel(ioProvider)
 			if err != nil {
 				return err
 			}
