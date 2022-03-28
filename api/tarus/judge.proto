@@ -86,7 +86,8 @@ message JudgeTestcase {
 
 message MakeJudgeRequest {
   bytes task_key = 1;
-  repeated JudgeTestcase testcases = 2;
+  string io_provider = 2;
+  repeated JudgeTestcase testcases = 3;
   bool is_async = 101;
 }
 
