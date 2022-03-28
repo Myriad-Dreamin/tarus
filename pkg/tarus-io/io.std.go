@@ -10,8 +10,20 @@ func NewStd(inp io.Reader, oup io.Writer, erp io.Writer) Factory {
 		erp = io.Discard
 	}
 
+	var stdCio *nopCio
 	if j, ok := oup.(JudgeChecker); ok {
-		return NopCIO2(cio.NewCreator(cio.WithStreams(inp, oup, erp)), j)
+		stdCio = NopCIO2(cio.NewCreator(cio.WithStreams(inp, oup, erp)), j)
+	} else {
+		stdCio = NopCIO(cio.NewCreator(cio.WithStreams(inp, oup, erp)))
 	}
-	return NopCIO(cio.NewCreator(cio.WithStreams(inp, oup, erp)))
+
+	for _, closable := range []interface{}{
+		inp, oup, erp,
+	} {
+		if c, ok := closable.(io.Closer); ok {
+			stdCio.closers = append(stdCio.closers, c)
+		}
+	}
+
+	return stdCio
 }
