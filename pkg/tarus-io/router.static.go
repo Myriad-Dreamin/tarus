@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -26,8 +27,10 @@ func (s *StaticRouter) MakeIOChannel(iop string) (ChannelFactory, error) {
 	switch protocol {
 	case "", "memory":
 		return s.RouteMemory(u), nil
+	case "file":
+		return s.RouteFilesystem(u)
 	default:
-		return nil, errors.Wrapf(errdefs.ErrNotFound, "io provider type")
+		return nil, errors.Wrapf(errdefs.ErrNotFound, "io provider type %s", protocol)
 	}
 }
 
@@ -60,4 +63,24 @@ func (s *StaticRouter) RouteMemory(_ *url.URL) ChannelFactory {
 
 		return NewStd(r, native_judge.StrictMatch(r2), os.Stderr), nil
 	}
+}
+
+func (s *StaticRouter) RouteFilesystem(fs *url.URL) (ChannelFactory, error) {
+	p := fs.Path
+	if !strings.HasPrefix(p, "/") && !strings.HasPrefix(p, "\\") {
+		return nil, errors.Wrapf(errdefs.ErrInvalidArgument, "want absolute path for filesystem io provider: %q", p)
+	}
+
+	return func(inp, oup string) (Factory, error) {
+		r, err := os.Open(filepath.Join(p, inp))
+		if err != nil {
+			return nil, err
+		}
+		r2, err := os.Open(filepath.Join(p, oup))
+		if err != nil {
+			return nil, err
+		}
+
+		return NewStd(r, native_judge.StrictMatch(r2), os.Stderr), nil
+	}, nil
 }
