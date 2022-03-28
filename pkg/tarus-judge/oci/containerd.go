@@ -205,7 +205,7 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 				return err
 			}
 
-			fac, err := ioc(judgePoint.InputUrl, judgePoint.OutputUrl)
+			fac, err := ioc(judgePoint.Input, judgePoint.Answer)
 			if err != nil {
 				return err
 			}

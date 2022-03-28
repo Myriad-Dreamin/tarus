@@ -21,8 +21,8 @@ func echoTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Contex
 			{
 				JudgeKey:   []byte("001"),
 				IoProvider: "memory",
-				InputUrl:   hexUrl(``),
-				OutputUrl:  hexUrl(`hello world`),
+				Input:      hexUrl(``),
+				Answer:     hexUrl(`hello world`),
 			},
 		},
 	}); err != nil {
@@ -38,8 +38,8 @@ func sleepTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Conte
 			{
 				JudgeKey:   []byte("001"),
 				IoProvider: "memory",
-				InputUrl:   hexUrl(``),
-				OutputUrl:  hexUrl(`hello world`),
+				Input:      hexUrl(``),
+				Answer:     hexUrl(`hello world`),
 			},
 		},
 	}); err != nil {
@@ -55,14 +55,14 @@ func sleepHardTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.C
 			{
 				JudgeKey:   []byte("001"),
 				IoProvider: "memory",
-				InputUrl:   hexUrl(``),
-				OutputUrl:  hexUrl(`hello world`),
+				Input:      hexUrl(``),
+				Answer:     hexUrl(`hello world`),
 			},
 			{
 				JudgeKey:   []byte("002"),
 				IoProvider: "memory",
-				InputUrl:   hexUrl(``),
-				OutputUrl:  hexUrl(`hello world`),
+				Input:      hexUrl(``),
+				Answer:     hexUrl(`hello world`),
 			},
 		},
 	}); err != nil {
@@ -78,8 +78,8 @@ func ioTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context)
 			{
 				JudgeKey:   []byte("001"),
 				IoProvider: "memory",
-				InputUrl:   hexUrl("1 2\n"),
-				OutputUrl:  hexUrl(`3`),
+				Input:      hexUrl("1 2\n"),
+				Answer:     hexUrl(`3`),
 			},
 		},
 	}); err != nil {
@@ -95,8 +95,8 @@ func inputTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Conte
 			{
 				JudgeKey:   []byte("001"),
 				IoProvider: "memory",
-				InputUrl:   hexUrl("yes\n"),
-				OutputUrl:  hexUrl(`yes`),
+				Input:      hexUrl("yes\n"),
+				Answer:     hexUrl(`yes`),
 			},
 		},
 	}); err != nil {
