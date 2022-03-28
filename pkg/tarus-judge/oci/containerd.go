@@ -181,7 +181,7 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 	}
 
 	var resp = new(tarus.MakeJudgeResponse)
-	for i := range request.Items {
+	for i := range request.Testcases {
 		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
 			// fmt.Printf("linux container create successfully\n")
 			s, err := cc.Spec(ctx)
@@ -195,7 +195,7 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 				return err
 			}
 
-			var judgePoint = request.Items[i]
+			var judgePoint = request.Testcases[i]
 			procOpts := procTmpl
 			procOpts.Terminal = false
 			procOpts.Args = []string{session.BinTarget}
@@ -337,9 +337,9 @@ func (c *ContainerdJudgeServiceServer) TransientJudge(rawCtx context.Context, re
 
 	return tarus_judge.WithContainerEnvironment(c, rawCtx, req, func(rawCtx context.Context, req *tarus_judge.TransientJudgeRequest) error {
 		resp, err := c.MakeJudge(rawCtx, &tarus.MakeJudgeRequest{
-			TaskKey: req.TaskKey,
-			Items:   req.Items,
-			IsAsync: false,
+			TaskKey:   req.TaskKey,
+			Testcases: req.Testcases,
+			IsAsync:   false,
 		})
 		if err != nil {
 			return err

@@ -70,7 +70,7 @@ message CompileProgramRequest {
   repeated string compile_features = 102;
 }
 
-message MakeJudgeItem {
+message JudgeTestcase {
   bytes judge_key = 1;
   string io_provider = 2;
   // stdin
@@ -85,7 +85,7 @@ message MakeJudgeItem {
 
 message MakeJudgeRequest {
   bytes task_key = 1;
-  repeated MakeJudgeItem items = 2;
+  repeated JudgeTestcase testcases = 2;
   bool is_async = 101;
 }
 
