@@ -6,10 +6,9 @@ import (
 )
 
 type TransientJudgeRequest struct {
-	TaskKey   []byte
+	*tarus.MakeJudgeRequest
 	ImageId   string
 	BinTarget string
-	Testcases []*tarus.JudgeTestcase
 
 	// Pause      JudgeInfra
 }

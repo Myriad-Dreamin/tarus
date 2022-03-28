@@ -17,12 +17,14 @@ func echoTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Contex
 	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/echo_test",
-		Testcases: []*tarus.JudgeTestcase{
-			{
-				JudgeKey:   []byte("001"),
-				IoProvider: "memory",
-				Input:      hexUrl(``),
-				Answer:     hexUrl(`hello world`),
+		MakeJudgeRequest: &tarus.MakeJudgeRequest{
+			Testcases: []*tarus.JudgeTestcase{
+				{
+					JudgeKey:   []byte("001"),
+					IoProvider: "memory",
+					Input:      hexUrl(``),
+					Answer:     hexUrl(`hello world`),
+				},
 			},
 		},
 	}); err != nil {
@@ -34,12 +36,14 @@ func sleepTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Conte
 	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/sleep_test",
-		Testcases: []*tarus.JudgeTestcase{
-			{
-				JudgeKey:   []byte("001"),
-				IoProvider: "memory",
-				Input:      hexUrl(``),
-				Answer:     hexUrl(`hello world`),
+		MakeJudgeRequest: &tarus.MakeJudgeRequest{
+			Testcases: []*tarus.JudgeTestcase{
+				{
+					JudgeKey:   []byte("001"),
+					IoProvider: "memory",
+					Input:      hexUrl(``),
+					Answer:     hexUrl(`hello world`),
+				},
 			},
 		},
 	}); err != nil {
@@ -51,18 +55,20 @@ func sleepHardTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.C
 	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/sleep_hard_test",
-		Testcases: []*tarus.JudgeTestcase{
-			{
-				JudgeKey:   []byte("001"),
-				IoProvider: "memory",
-				Input:      hexUrl(``),
-				Answer:     hexUrl(`hello world`),
-			},
-			{
-				JudgeKey:   []byte("002"),
-				IoProvider: "memory",
-				Input:      hexUrl(``),
-				Answer:     hexUrl(`hello world`),
+		MakeJudgeRequest: &tarus.MakeJudgeRequest{
+			Testcases: []*tarus.JudgeTestcase{
+				{
+					JudgeKey:   []byte("001"),
+					IoProvider: "memory",
+					Input:      hexUrl(``),
+					Answer:     hexUrl(`hello world`),
+				},
+				{
+					JudgeKey:   []byte("002"),
+					IoProvider: "memory",
+					Input:      hexUrl(``),
+					Answer:     hexUrl(`hello world`),
+				},
 			},
 		},
 	}); err != nil {
@@ -74,12 +80,14 @@ func ioTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context)
 	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/io_test",
-		Testcases: []*tarus.JudgeTestcase{
-			{
-				JudgeKey:   []byte("001"),
-				IoProvider: "memory",
-				Input:      hexUrl("1 2\n"),
-				Answer:     hexUrl(`3`),
+		MakeJudgeRequest: &tarus.MakeJudgeRequest{
+			Testcases: []*tarus.JudgeTestcase{
+				{
+					JudgeKey:   []byte("001"),
+					IoProvider: "memory",
+					Input:      hexUrl("1 2\n"),
+					Answer:     hexUrl(`3`),
+				},
 			},
 		},
 	}); err != nil {
@@ -91,12 +99,14 @@ func inputTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Conte
 	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/echo_input_test",
-		Testcases: []*tarus.JudgeTestcase{
-			{
-				JudgeKey:   []byte("001"),
-				IoProvider: "memory",
-				Input:      hexUrl("yes\n"),
-				Answer:     hexUrl(`yes`),
+		MakeJudgeRequest: &tarus.MakeJudgeRequest{
+			Testcases: []*tarus.JudgeTestcase{
+				{
+					JudgeKey:   []byte("001"),
+					IoProvider: "memory",
+					Input:      hexUrl("yes\n"),
+					Answer:     hexUrl(`yes`),
+				},
 			},
 		},
 	}); err != nil {

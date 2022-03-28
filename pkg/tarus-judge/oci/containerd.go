@@ -341,11 +341,8 @@ func (c *ContainerdJudgeServiceServer) TransientJudge(rawCtx context.Context, re
 	}
 
 	return tarus_judge.WithContainerEnvironment(c, rawCtx, req, func(rawCtx context.Context, req *tarus_judge.TransientJudgeRequest) error {
-		resp, err := c.MakeJudge(rawCtx, &tarus.MakeJudgeRequest{
-			TaskKey:   req.TaskKey,
-			Testcases: req.Testcases,
-			IsAsync:   false,
-		})
+		req.IsAsync = false
+		resp, err := c.MakeJudge(rawCtx, req.MakeJudgeRequest)
 		if err != nil {
 			return err
 		}
