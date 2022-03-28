@@ -6,6 +6,7 @@ import (
 	native_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-checker/native"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/pkg/errors"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -13,17 +14,21 @@ import (
 type StaticRouter struct{}
 
 func (s *StaticRouter) MakeIOChannel(iop string) (ChannelFactory, error) {
-	switch strings.SplitN(iop, ",", 2)[0] {
-	case "":
-	case "memory":
-		return s.RouteMemory(iop), nil
+	u, err := url.Parse(iop)
+	if err != nil {
+		return nil, err
+	}
+	protocol := u.Scheme
+	if len(protocol) == 0 {
+		protocol = u.Path
+	}
+
+	switch protocol {
+	case "", "memory":
+		return s.RouteMemory(u), nil
 	default:
 		return nil, errors.Wrapf(errdefs.ErrNotFound, "io provider type")
 	}
-	if iop == "" {
-	}
-
-	return nil, errdefs.ErrNotFound
 }
 
 func getHexBuffer(s string) (*bytes.Buffer, error) {
@@ -42,7 +47,7 @@ func getHexBuffer(s string) (*bytes.Buffer, error) {
 
 var Statics = &StaticRouter{}
 
-func (s *StaticRouter) RouteMemory(_ string) ChannelFactory {
+func (s *StaticRouter) RouteMemory(_ *url.URL) ChannelFactory {
 	return func(inp, oup string) (Factory, error) {
 		r, err := getHexBuffer(inp)
 		if err != nil {
