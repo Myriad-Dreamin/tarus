@@ -29,6 +29,7 @@ func New() *cli.App {
 	var tarusCommands = []Command{
 		commandStatus,
 		commandService,
+		commandSubmit,
 	}
 
 	h, _ := os.UserHomeDir()
