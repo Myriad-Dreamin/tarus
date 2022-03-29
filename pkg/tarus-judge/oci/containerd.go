@@ -1,6 +1,7 @@
 package oci_judge
 
 import (
+	"bytes"
 	context "context"
 	"encoding/hex"
 	"encoding/json"
@@ -79,7 +80,17 @@ func (c *ContainerdJudgeServiceServer) Close() error {
 }
 
 func (c *ContainerdJudgeServiceServer) Handshake(ctx context.Context, request *tarus.HandshakeRequest) (*tarus.HandshakeResponse, error) {
-	return c.UnimplementedJudgeServiceServer.Handshake(ctx, request)
+	if !bytes.Equal(request.ApiVersion, []byte("v0.0.0")) {
+		return nil, status.Error(codes.FailedPrecondition, "client version not handled by service")
+	}
+
+	return &tarus.HandshakeResponse{
+		ApiVersion:      ContainerdVersion,
+		JudgeStatusHash: tarus_judge.JudgeStatusHash,
+		ImplementedApis: []string{
+			tarus_judge.JudgeServiceApiMinimum,
+		},
+	}, nil
 }
 
 func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *tarus.CopyRequest) (*emptypb.Empty, error) {
