@@ -2,12 +2,10 @@ package oci_judge
 
 import (
 	"bytes"
-	context "context"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
-	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
 	tarus_io "github.com/Myriad-Dreamin/tarus/pkg/tarus-io"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
@@ -24,7 +22,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -336,37 +333,4 @@ func (c *ContainerdJudgeServiceServer) ImportOCIArchive(ctx context.Context, fp 
 	}
 
 	return nil
-}
-
-var tk = []byte("transient:")
-
-func (c *ContainerdJudgeServiceServer) TransientJudge(rawCtx context.Context, req *tarus_judge.TransientJudgeRequest) error {
-	if req.TaskKey == nil {
-		token := make([]byte, 12)
-		_, err := rand.Read(token)
-		if err != nil {
-			return err
-		}
-		key := make([]byte, 24+len(tk))
-		copy(key[:len(tk)], tk)
-		copy(key[len(tk):], hex.EncodeToString(token))
-		req.TaskKey = key
-	}
-
-	return tarus_judge.WithContainerEnvironment(c, rawCtx, req, func(rawCtx context.Context, req *tarus_judge.TransientJudgeRequest) error {
-		req.IsAsync = false
-		resp, err := c.MakeJudge(rawCtx, req.MakeJudgeRequest)
-		if err != nil {
-			return err
-		}
-
-		for i := range resp.Items {
-			fmt.Printf("req %d judge: %v/%v/%v, resp: %v\n",
-				i,
-				time.Duration(resp.Items[i].TimeUse)*time.Nanosecond,
-				time.Duration(resp.Items[i].TimeUseHard)*time.Nanosecond,
-				hr_bytes.Byte(resp.Items[i].MemoryUse), resp.Items[i])
-		}
-		return nil
-	})
 }

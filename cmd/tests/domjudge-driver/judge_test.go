@@ -23,7 +23,7 @@ func TestDomJudge_BAPC2019A_Accepted(t *testing.T) {
 
 	var ctx = context.Background()
 
-	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		MakeJudgeRequest: desc,
 		ImageId:          "docker.io/library/ubuntu:20.04",
 		BinTarget:        "/workdir/bapc2019_a_accepted_test",

@@ -14,7 +14,7 @@ func hexUrl(s string) string {
 }
 
 func echoTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
-	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/echo_test",
 		MakeJudgeRequest: &tarus.MakeJudgeRequest{
@@ -33,7 +33,7 @@ func echoTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Contex
 }
 
 func sleepTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
-	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/sleep_test",
 		MakeJudgeRequest: &tarus.MakeJudgeRequest{
@@ -52,7 +52,7 @@ func sleepTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Conte
 }
 
 func sleepHardTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
-	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/sleep_hard_test",
 		MakeJudgeRequest: &tarus.MakeJudgeRequest{
@@ -77,7 +77,7 @@ func sleepHardTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.C
 }
 
 func ioTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
-	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/io_test",
 		MakeJudgeRequest: &tarus.MakeJudgeRequest{
@@ -96,7 +96,7 @@ func ioTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context)
 }
 
 func inputTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
-	if err := client.TransientJudge(ctx, &tarus_judge.TransientJudgeRequest{
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
 		BinTarget: "/workdir/echo_input_test",
 		MakeJudgeRequest: &tarus.MakeJudgeRequest{
