@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	"github.com/k0kubun/pp/v3"
 	"github.com/urfave/cli"
 )
 
@@ -40,8 +41,19 @@ func actServiceStatus(c *Client, _ *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(resp)
-	return nil
+
+	type ServiceStatus struct {
+		ApiVersion      string
+		JudgeStatusHash string
+		ImplementedApis []string
+	}
+	fmt.Printf("Response: ")
+	_, err = pp.Println(ServiceStatus{
+		ApiVersion:      string(resp.ApiVersion),
+		JudgeStatusHash: resp.JudgeStatusHash,
+		ImplementedApis: resp.ImplementedApis,
+	})
+	return err
 }
 
 func (c *Client) initService(args *cli.Context) (err error) {

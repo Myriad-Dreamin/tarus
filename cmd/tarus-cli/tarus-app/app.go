@@ -2,6 +2,7 @@ package tarus_app
 
 import (
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	"github.com/k0kubun/pp/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
@@ -69,4 +70,17 @@ func (c *Client) inject(commands []cli.Command) []cli.Command {
 	}
 
 	return commands
+}
+
+func init() {
+	pp.SetColorScheme(pp.ColorScheme{
+		StructName:      pp.White,
+		FieldName:       pp.Blue | pp.Bold,
+		Bool:            pp.Yellow,
+		Integer:         pp.Yellow,
+		Nil:             pp.Yellow,
+		Float:           pp.Yellow,
+		String:          pp.Green,
+		StringQuotation: pp.Green,
+	})
 }
