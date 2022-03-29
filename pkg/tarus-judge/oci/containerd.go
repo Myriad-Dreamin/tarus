@@ -76,7 +76,7 @@ func (c *ContainerdJudgeServiceServer) Close() error {
 	return nil
 }
 
-func (c *ContainerdJudgeServiceServer) Handshake(ctx context.Context, request *tarus.HandshakeRequest) (*tarus.HandshakeResponse, error) {
+func (c *ContainerdJudgeServiceServer) Handshake(_ context.Context, request *tarus.HandshakeRequest) (*tarus.HandshakeResponse, error) {
 	if !bytes.Equal(request.ApiVersion, []byte("v0.0.0")) {
 		return nil, status.Error(codes.FailedPrecondition, "client version not handled by service")
 	}
