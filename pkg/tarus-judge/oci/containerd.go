@@ -131,6 +131,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 			oci.WithMounts(mounts),
 			oci.WithProcessCwd("/workdir"),
 		),
+		// containerd.WithRuntime("/home/kamiyoru/work/go/tarus/cmd/runsc/wrapper.template.sh", nil),
 	)
 
 	if err != nil {
