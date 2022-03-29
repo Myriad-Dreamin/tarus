@@ -160,7 +160,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 		return nil, err
 	}
 
-	return nil, nil
+	return new(emptypb.Empty), nil
 }
 
 func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, request *tarus.RemoveContainerRequest) (*emptypb.Empty, error) {
@@ -178,7 +178,7 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 		return nil, err
 	}
 
-	return nil, nil
+	return new(emptypb.Empty), nil
 }
 
 func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*tarus.MakeJudgeResponse, error) {
