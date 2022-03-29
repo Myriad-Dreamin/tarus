@@ -11,6 +11,7 @@ import (
 )
 
 type ActionFunc = func(c *Client, args *cli.Context) error
+type Command cli.Command
 
 type Client struct {
 	grpcConn   *grpc.ClientConn
@@ -25,7 +26,7 @@ func New() *cli.App {
 	app.Version = "v0.0.0"
 	app.EnableBashCompletion = true
 
-	var tarusCommands = []cli.Command{
+	var tarusCommands = []Command{
 		commandStatus,
 		commandService,
 	}
@@ -44,7 +45,7 @@ func New() *cli.App {
 		},
 	}
 	var c = new(Client)
-	app.Commands = append(app.Commands, c.inject(tarusCommands)...)
+	app.Commands = append(app.Commands, c.inject(toCliCommands(tarusCommands))...)
 	app.Before = func(args *cli.Context) error {
 		if args.GlobalBool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
@@ -57,7 +58,14 @@ func New() *cli.App {
 	return app
 }
 
-func (c *Client) inject(commands []cli.Command) []cli.Command {
+func toCliCommands(commands []Command) (cc []cli.Command) {
+	for i := range commands {
+		cc = append(cc, cli.Command(commands[i]))
+	}
+	return cc
+}
+
+func (c *Client) inject(commands []cli.Command) (cc []cli.Command) {
 	if len(commands) == 0 {
 		return commands
 	}
@@ -70,6 +78,32 @@ func (c *Client) inject(commands []cli.Command) []cli.Command {
 	}
 
 	return commands
+}
+
+func (c Command) WithInitService() Command {
+	a, b := c.After, c.Before
+	c.Before = func(args *cli.Context) error {
+		if a != nil {
+			if err := a(args); err != nil {
+				return err
+			}
+		}
+		c := args.App.Metadata["$client"].(*Client)
+		return c.initService(args)
+	}
+	c.After = func(args *cli.Context) (err error) {
+		if b != nil {
+			err = b(args)
+		}
+		c := args.App.Metadata["$client"].(*Client)
+		if c.grpcConn != nil {
+			if err == nil {
+				err = c.grpcConn.Close()
+			}
+		}
+		return
+	}
+	return c
 }
 
 func init() {

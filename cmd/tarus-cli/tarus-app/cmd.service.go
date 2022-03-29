@@ -8,20 +8,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-var commandService = cli.Command{
-	Name:  "service",
-	Usage: "service operations",
-	Before: func(args *cli.Context) error {
-		c := args.App.Metadata["$client"].(*Client)
-		return c.initService(args)
-	},
-	After: func(args *cli.Context) error {
-		c := args.App.Metadata["$client"].(*Client)
-		if c.grpcConn != nil {
-			return c.grpcConn.Close()
-		}
-		return nil
-	},
+var commandService = Command{
+	Name:   "service",
+	Usage:  "service operations",
 	Action: actServiceStatus,
 	Subcommands: []cli.Command{
 		{
@@ -30,7 +19,7 @@ var commandService = cli.Command{
 			Action: actServiceStatus,
 		},
 	},
-}
+}.WithInitService()
 
 func actServiceStatus(c *Client, _ *cli.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
