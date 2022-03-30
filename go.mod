@@ -5,7 +5,9 @@ go 1.18
 require (
 	github.com/containerd/containerd v1.5.7
 	github.com/containerd/typeurl v1.0.2
+	github.com/google/go-containerregistry v0.5.1
 	github.com/k0kubun/pp/v3 v3.1.0
+	github.com/nightlyone/lockfile v1.0.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
@@ -23,8 +25,13 @@ require (
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/containerd/fifo v1.0.0 // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.4.1 // indirect
 	github.com/containerd/ttrpc v1.1.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017 // indirect
+	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7 // indirect
+	github.com/docker/docker-credential-helpers v0.6.3 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/gogo/googleapis v1.4.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
