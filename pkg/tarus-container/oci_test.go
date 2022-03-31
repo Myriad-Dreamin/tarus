@@ -1,9 +1,12 @@
 package tarus_container
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	oci_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge/oci"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -14,7 +17,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/nightlyone/lockfile"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -162,6 +167,30 @@ func pullBase(src string, path string) (v1.Image, error) {
 	return image, nil
 }
 
+func createStdImg(image v1.Image) (*v1.Manifest, error) {
+	b, err := image.RawConfigFile()
+	if err != nil {
+		return nil, err
+	}
+
+	cfgHash, cfgSize, err := v1.SHA256(bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+
+	m := &v1.Manifest{
+		SchemaVersion: 2,
+		MediaType:     types.DockerManifestSchema2,
+		Config: v1.Descriptor{
+			MediaType: types.DockerConfigJSON,
+			Size:      cfgSize,
+			Digest:    cfgHash,
+		},
+	}
+
+	return m, nil
+}
+
 func TestPull(t *testing.T) {
 	image, err := pullBase("docker.io/library/ubuntu:20.04", "containers/.cache/bundles/linux")
 	if err != nil {
@@ -173,20 +202,41 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	image, err = mutate.AppendLayers(image, pythonInstall)
+	image, err = mutate.Append(image, mutate.Addendum{
+		Layer: pythonInstall,
+		History: v1.History{
+			Author:     "Myriad-Dreamin",
+			Created:    v1.Time{Time: time.Now()},
+			CreatedBy:  "tarus-container append env prebuilts/python-3.10.4.tar",
+			Comment:    "auto generated",
+			EmptyLayer: false,
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var x = time.Now()
-	f, err := os.OpenFile("containers/python/build/init.tar", os.O_WRONLY|os.O_CREATE, 0644)
+	client, err := oci_judge.NewContainerdServer()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		_ = f.Close()
+
+	target := "kcr.skyline.io/library/python-judge:3.10.4"
+	ref, err := name.NewTag(target)
+	if err != nil {
+		t.Fatal(fmt.Errorf("parsing reference %q: %v", target, err))
+	}
+
+	pr, pw := io.Pipe()
+	go func() {
+		_ = pw.CloseWithError(tarball.MultiWrite(map[name.Tag]v1.Image{
+			ref: image,
+		}, pw))
 	}()
-	if err = crane.Export(image, f); err != nil {
-		t.Fatal(fmt.Errorf("saving tarball %s: %v", "containers/python/build/init.tar", err))
+
+	if err = client.ImportOCIArchiveR(context.Background(), pr, target); err != nil {
+		t.Fatal(fmt.Errorf("saving archive to daemon %v", err))
 	}
 	fmt.Println("layer saved", time.Now().Sub(x))
 }

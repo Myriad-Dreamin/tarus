@@ -319,6 +319,24 @@ func (c *ContainerdJudgeServiceServer) QueryJudge(ctx context.Context, request *
 	return c.UnimplementedJudgeServiceServer.QueryJudge(ctx, request)
 }
 
+func (c *ContainerdJudgeServiceServer) ImportOCIArchiveR(ctx context.Context, f io.Reader, ref string) error {
+	ctx = namespaces.WithNamespace(ctx, "tarus")
+
+	_, err := c.client.Import(ctx, f, containerd.WithImageRefTranslator(func(s string) string {
+		fmt.Println("s", s)
+		if len(ref) != 0 {
+			return ref
+		}
+
+		return s
+	}))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *ContainerdJudgeServiceServer) ImportOCIArchive(ctx context.Context, fp string) error {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
 

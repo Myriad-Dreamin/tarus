@@ -30,6 +30,7 @@ func New() *cli.App {
 		commandStatus,
 		commandService,
 		commandSubmit,
+		commandEnvBuild,
 	}
 
 	h, _ := os.UserHomeDir()
@@ -72,6 +73,10 @@ func (c *Client) inject(commands []cli.Command) (cc []cli.Command) {
 	}
 	for i := range commands {
 		commands[i].Subcommands = c.inject(commands[i].Subcommands)
+
+		if commands[i].Action == nil {
+			continue
+		}
 		a := commands[i].Action.(ActionFunc)
 		commands[i].Action = func(args *cli.Context) error {
 			return a(c, args)
