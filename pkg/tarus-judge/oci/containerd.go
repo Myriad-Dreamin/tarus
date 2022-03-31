@@ -25,8 +25,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -271,6 +273,10 @@ func getOrDefault(L, R int64) int64 {
 	return R
 }
 
+type Rep struct {
+	ErrOut []byte `yaml:"errout"`
+}
+
 func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*tarus.MakeJudgeResponse, error) {
 	ctx := namespaces.WithNamespace(rawCtx, "tarus")
 
@@ -292,8 +298,8 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 	procTmpl := *s.Process
 	reqLevelCpuhard := getOrDefault(request.Cpuhard, int64(15*time.Second))
 	reqLevelCputime := getOrDefault(request.Cputime, int64(10*time.Second))
-	reqLevelMemory := getOrDefault(request.Memory, int64(1024*hr_bytes.MB))
-	reqLevelStack := getOrDefault(request.Stack, int64(1024*hr_bytes.MB))
+	reqLevelMemory := getOrDefault(request.Memory, int64(512*hr_bytes.MB))
+	reqLevelStack := getOrDefault(request.Stack, int64(512*hr_bytes.MB))
 
 	var resp = new(tarus.MakeJudgeResponse)
 	for i := range request.Testcases {
@@ -322,8 +328,8 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 
 			cpuhard := getOrDefault(judgePoint.EstimatedCpuhard, reqLevelCpuhard)
 			cputime := getOrDefault(judgePoint.EstimatedCputime, reqLevelCputime)
-			memory := getOrDefault(judgePoint.EstimatedMemory, reqLevelMemory)
-			stack := getOrDefault(judgePoint.EstimatedStack, reqLevelStack)
+			memoryLimit := getOrDefault(judgePoint.EstimatedMemory, reqLevelMemory)
+			stackLimit := getOrDefault(judgePoint.EstimatedStack, reqLevelStack)
 
 			// todo: check default rlimit, check rlimit_core
 			if len(procOpts.Rlimits) != 0 {
@@ -342,19 +348,19 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 				}
 			}
 
-			if memory > 1 {
+			if memoryLimit > 1 {
 				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
 					Type: "RLIMIT_DATA",
-					Soft: uint64(memory),
-					Hard: uint64(memory + (32 * int64(hr_bytes.MB))),
+					Soft: uint64(memoryLimit),
+					Hard: uint64(memoryLimit + (32 * int64(hr_bytes.MB))),
 				})
 			}
 
-			if stack > 1 {
+			if stackLimit > 1 {
 				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
 					Type: "RLIMIT_STACK",
-					Soft: uint64(stack),
-					Hard: uint64(stack + (32 * int64(hr_bytes.MB))),
+					Soft: uint64(stackLimit),
+					Hard: uint64(stackLimit + (32 * int64(hr_bytes.MB))),
 				})
 			}
 
@@ -381,8 +387,8 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 					_ = c.killProcess(ctx, process)
 				}()
 
-				select {
-				case st := <-statusC:
+				var st containerd.ExitStatus
+				var processResult = func(hardTimeout bool) error {
 					var qr = &tarus.QueryJudgeItem{
 						JudgeKey: judgePoint.JudgeKey,
 					}
@@ -392,7 +398,11 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 						return err
 					}
 					jh.Code = int(code)
-					qr.TimeUseHard = int64(exitedAt.Sub(processStartTime) * time.Nanosecond)
+					if exitedAt.IsZero() {
+						qr.TimeUseHard = int64(time.Now().Sub(processStartTime) * time.Nanosecond)
+					} else {
+						qr.TimeUseHard = int64(exitedAt.Sub(processStartTime) * time.Nanosecond)
+					}
 
 					s, err := fac.GetJudgeResult()
 					if err != nil {
@@ -414,8 +424,61 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 						//fmt.Printf("metrics memory result: %v %v %v\n", m2.Memory.Usage.Max, m2.Memory.Usage.Usage, m2.Memory.RSS)
 						qr.TimeUse = int64(m2.CPU.Usage.User)
 						qr.MemoryUse = int64(m2.Memory.Usage.Max)
+						if qr.MemoryUse < int64(m2.Memory.TotalRSS) {
+							qr.MemoryUse = int64(m2.Memory.TotalRSS)
+						}
 					} else {
 						fmt.Println("invalid type url for extracting metrics", m.Data.TypeUrl)
+					}
+
+					var sig os.Signal
+					if 128 < code && code < 128+0x20 {
+						sig = syscall.Signal(code - 128)
+					} else if code == 2 {
+						golangRepMapping := map[string]os.Signal{
+							"SIGABRT":   syscall.SIGABRT,
+							"SIGALRM":   syscall.SIGALRM,
+							"SIGBUS":    syscall.SIGBUS,
+							"SIGCHLD":   syscall.SIGCHLD,
+							"SIGCLD":    syscall.SIGCLD,
+							"SIGCONT":   syscall.SIGCONT,
+							"SIGFPE":    syscall.SIGFPE,
+							"SIGHUP":    syscall.SIGHUP,
+							"SIGILL":    syscall.SIGILL,
+							"SIGINT":    syscall.SIGINT,
+							"SIGIO":     syscall.SIGIO,
+							"SIGIOT":    syscall.SIGIOT,
+							"SIGKILL":   syscall.SIGKILL,
+							"SIGPIPE":   syscall.SIGPIPE,
+							"SIGPOLL":   syscall.SIGPOLL,
+							"SIGPROF":   syscall.SIGPROF,
+							"SIGPWR":    syscall.SIGPWR,
+							"SIGQUIT":   syscall.SIGQUIT,
+							"SIGSEGV":   syscall.SIGSEGV,
+							"SIGSTKFLT": syscall.SIGSTKFLT,
+							"SIGSTOP":   syscall.SIGSTOP,
+							"SIGSYS":    syscall.SIGSYS,
+							"SIGTERM":   syscall.SIGTERM,
+							"SIGTRAP":   syscall.SIGTRAP,
+							"SIGTSTP":   syscall.SIGTSTP,
+							"SIGTTIN":   syscall.SIGTTIN,
+							"SIGTTOU":   syscall.SIGTTOU,
+							"SIGUNUSED": syscall.SIGUNUSED,
+							"SIGURG":    syscall.SIGURG,
+							"SIGUSR1":   syscall.SIGUSR1,
+							"SIGUSR2":   syscall.SIGUSR2,
+							"SIGVTALRM": syscall.SIGVTALRM,
+							"SIGWINCH":  syscall.SIGWINCH,
+							"SIGXCPU":   syscall.SIGXCPU,
+							"SIGXFSZ":   syscall.SIGXFSZ,
+						}
+						golangRepCapture := regexp.MustCompile("SIG(?:ABRT|ALRM|BUS|CHLD|CLD|CONT|FPE|HUP|ILL|INT|IO|IOT|KILL|PIPE|POLL|PROF|PWR|QUIT|SEGV|STKFLT|STOP|SYS|TERM|TRAP|TSTP|TTIN|TTOU|UNUSED|URG|USR1|USR2|VTALRM|WINCH|XCPU|XFSZ)")
+						if trapped := golangRepCapture.FindString(jh.CheckerResult); len(trapped) != 0 {
+							sig = golangRepMapping[trapped]
+						}
+					}
+					if sig != nil {
+						jh.Signal = sig.String()
 					}
 
 					qr.Hint, err = json.Marshal(jh)
@@ -423,13 +486,54 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 						return err
 					}
 
-					qr.Status, err = fac.GetJudgeStatus(s)
-					if err != nil {
-						return err
+					if qr.MemoryUse >= memoryLimit {
+						qr.Status = tarus.JudgeStatus_MemoryLimitExceed
+					} else if qr.TimeUseHard >= cputime+int64(time.Millisecond*50) || qr.TimeUse >= cputime+int64(time.Millisecond*50) {
+						qr.Status = tarus.JudgeStatus_TimeLimitExceed
 					}
+
+					if hardTimeout {
+						qr.Status = tarus.JudgeStatus_TimeLimitExceed
+					} else if sig != nil {
+						switch sig {
+						case syscall.SIGKILL:
+							if qr.Status == 0 {
+								qr.Status = tarus.JudgeStatus_RuntimeError
+							}
+						case syscall.SIGSYS:
+							qr.Status = tarus.JudgeStatus_SecurityPolicyViolation
+						case syscall.SIGABRT:
+							qr.Status = tarus.JudgeStatus_AssertionFailed
+						case syscall.SIGFPE:
+							qr.Status = tarus.JudgeStatus_FloatingPointException
+						// case syscall.SIGSEGV:
+						// case syscall.SIGILL:
+						default:
+							qr.Status = tarus.JudgeStatus_RuntimeError
+						}
+					} else if code != 0 {
+						qr.Status = tarus.JudgeStatus_RuntimeError
+					} else if qr.Status == 0 {
+						qr.Status, err = fac.GetJudgeStatus(s)
+						if err != nil {
+							return err
+						}
+					}
+
 					resp.Items = append(resp.Items, qr)
+					return nil
+				}
+
+				select {
+				case st = <-statusC:
+					if err = processResult(false); err != nil {
+						fmt.Println(err)
+					}
 				case <-time.After(time.Duration(cpuhard) * time.Nanosecond):
 					fmt.Printf("linux container timeout stop\n")
+					if err = processResult(true); err != nil {
+						fmt.Println(err)
+					}
 				}
 
 				return nil

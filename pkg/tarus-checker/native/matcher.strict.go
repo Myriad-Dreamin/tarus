@@ -2,7 +2,6 @@ package native_judge
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	"io"
@@ -34,10 +33,10 @@ func StrictMatch(r io.Reader) *StrictMatcher {
 }
 
 func (m *StrictMatcher) GetJudgeResult() ([]byte, error) {
-	b := m.ErrBuf.Bytes()
+	b := m.ErrBuf.String()
 	var q string
 	if len(b) != 0 {
-		q = fmt.Sprintf("matched: %v\nerrout: %q", m.pos, base64.RawStdEncoding.EncodeToString(b))
+		q = fmt.Sprintf("matched: %v\nerrout: %q", m.pos, b)
 	} else {
 		q = fmt.Sprintf("matched: %v", m.pos)
 	}

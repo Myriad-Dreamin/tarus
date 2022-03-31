@@ -157,7 +157,10 @@ enum JudgeStatus {
   SecurityPolicyViolation = 102;
   // crashing the judge checker, for the problem writers :)
   JudgeCheckerException = 103;
-
+  // signal abort is raised, convert to runtime error if one wants
+  AssertionFailed = 104;
+  // signal float point exception is raised, convert to runtime error if one wants
+  FloatingPointException = 105;
 }
 
 message QueryJudgeItem {

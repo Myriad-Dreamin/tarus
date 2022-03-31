@@ -21,5 +21,6 @@ type MemoryJudgeConfig struct {
 
 type JudgeHint struct {
 	Code          int    `json:"code" yaml:"code"`
+	Signal        string `json:"signal,omitempty" yaml:"signal,omitempty"`
 	CheckerResult string `json:"checker_result" yaml:"checker_result"`
 }
