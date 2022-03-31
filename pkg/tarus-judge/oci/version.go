@@ -1,5 +1,5 @@
 package oci_judge
 
 var (
-	ContainerdVersion = []byte("oci-v1.0.0")
+	ContainerdJudgeVersion = []byte("oci-v1.0.0")
 )

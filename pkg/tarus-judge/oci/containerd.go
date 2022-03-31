@@ -27,20 +27,84 @@ import (
 	"time"
 )
 
+type ContainerdJudgeOption func(svc *ContainerdJudgeServiceServer) error
+
+type ContainerdJudgeConfig struct {
+	Address        string `json:"address"`
+	JudgeCachePath string `json:"judge_cache_path"`
+	Concurrency    int    `json:"concurrency"`
+	JudgeWorkdir   string `json:"judge_workdir"`
+}
+
 type ContainerdJudgeServiceServer struct {
 	tarus.UnimplementedJudgeServiceServer
 	client       *containerd.Client
 	sessionStore tarus_store.JudgeSessionStore
 	closers      []io.Closer
 	ioRouter     tarus_io.Router
+
+	options   ContainerdJudgeConfig
+	ccLimiter chan int
 }
 
-func NewContainerdServer() (svc *ContainerdJudgeServiceServer, err error) {
+func WithContainerdAddress(address string) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.options.Address = address
+		return nil
+	}
+}
+
+func WithContainerdJudgeCachePath(path string) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.options.JudgeCachePath = path
+		return nil
+	}
+}
+
+func WithContainerdConcurrencyNum(cc int) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.options.Concurrency = cc
+		return nil
+	}
+}
+
+func WithContainerdJudgeWorkdir(wd string) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.options.JudgeWorkdir = wd
+		return nil
+	}
+}
+
+func defaultContainerdJudgeConfig() ContainerdJudgeConfig {
+	return ContainerdJudgeConfig{
+		Address:        "/run/containerd/containerd.sock",
+		JudgeCachePath: "./test.db",
+		JudgeWorkdir:   "./data/workdir-judge-engine{cid}",
+		Concurrency:    1,
+	}
+}
+
+func NewContainerdServer(options ...ContainerdJudgeOption) (svc *ContainerdJudgeServiceServer, err error) {
 	svc = &ContainerdJudgeServiceServer{
 		ioRouter: tarus_io.Statics,
+		options:  defaultContainerdJudgeConfig(),
 	}
 
-	svc.client, err = containerd.New("/run/containerd/containerd.sock",
+	for i := range options {
+		if err := options[i](svc); err != nil {
+			return nil, err
+		}
+	}
+
+	if svc.options.Concurrency <= 0 {
+		return nil, fmt.Errorf("invalid conccurency option, should be greater than zero: %d", svc.options.Concurrency)
+	}
+	svc.ccLimiter = make(chan int, svc.options.Concurrency)
+	for i := 0; i < svc.options.Concurrency; i++ {
+		svc.ccLimiter <- i
+	}
+
+	svc.client, err = containerd.New(svc.options.Address,
 		containerd.WithDefaultNamespace("tarus"))
 	if err != nil {
 		return
@@ -53,7 +117,7 @@ func NewContainerdServer() (svc *ContainerdJudgeServiceServer, err error) {
 		}
 	}()
 
-	b, err := bbolt.Open("./test.db", os.FileMode(0644), nil)
+	b, err := bbolt.Open(svc.options.JudgeCachePath, os.FileMode(0644), nil)
 	if err != nil {
 		return
 	}
@@ -82,7 +146,7 @@ func (c *ContainerdJudgeServiceServer) Handshake(_ context.Context, request *tar
 	}
 
 	return &tarus.HandshakeResponse{
-		ApiVersion:      ContainerdVersion,
+		ApiVersion:      ContainerdJudgeVersion,
 		JudgeStatusHash: tarus_judge.JudgeStatusHash,
 		ImplementedApis: []string{
 			tarus_judge.JudgeServiceApiMinimum,
