@@ -57,8 +57,45 @@ Response: []tarus_app.JudgeResult{
 ## Design
 
 The Judge Service is defined in GRPC Service, hence both embedded service and remote service are supported. And, the
-OCI Standard has been implemented as a tarus judge service (runtime), so most oci-runtime are available in this
-framework.
+OCI Standard has been implemented as a tarus judge service (runtime), so most oci-runtime are soon available in this
+framework, including [runC](https://github.com/opencontainers/runc), [gVisor](https://github.com/google/gvisor) and
+[Kata Containers](https://github.com/kata-containers/kata-containers).
 
 ![Arch](./docs/arch.svg)
+
+Also, the judge proxy service such as [Kafka Gateway](https://github.com/apache/kafka) is on the way, which can connect
+multiple judge runtime services and provides more functionality for users.
+
+```protobuf
+service JudgeService::Runtime { // minimum implementation
+  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
+  rpc CreateContainer(CreateContainerRequest) returns (google.protobuf.Empty);
+  rpc RemoveContainer(RemoveContainerRequest) returns (google.protobuf.Empty);
+  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  rpc MakeJudge(MakeJudgeRequest) returns (MakeJudgeResponse);
+}
+
+service JudgeService::Compiler { // compiler implementation
+  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
+  rpc CreateContainer(CreateContainerRequest) returns (google.protobuf.Empty);
+  rpc RemoveContainer(RemoveContainerRequest) returns (google.protobuf.Empty);
+  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  rpc CompileProgram(CompileProgramRequest) returns (google.protobuf.Empty);
+}
+
+service JudgeService::Async { // async service implementation
+  JudgeService::Runtime
+
+  rpc QueryJudge(QueryJudgeRequest) returns (QueryJudgeResponse);
+}
+service JudgeService::Gateway { // service aggregator
+  JudgeService::Minimum
+  JudgeService::Compiler
+  JudgeService::Async
+}
+```
+
+![Service Flow](./docs/service-flow.svg)
+
+
 
