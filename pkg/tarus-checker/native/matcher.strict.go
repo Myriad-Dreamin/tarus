@@ -1,14 +1,17 @@
 package native_judge
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	"io"
 )
 
 type StrictMatcher struct {
-	r   io.Reader
-	pos int64
+	r      io.Reader
+	pos    int64
+	ErrBuf bytes.Buffer
 }
 
 func (m StrictMatcher) comp(l []byte, r []byte) int {
@@ -26,12 +29,19 @@ func (m StrictMatcher) comp(l []byte, r []byte) int {
 	return n
 }
 
-func StrictMatch(r io.Reader) io.Writer {
+func StrictMatch(r io.Reader) *StrictMatcher {
 	return &StrictMatcher{r: r, pos: 0}
 }
 
 func (m *StrictMatcher) GetJudgeResult() ([]byte, error) {
-	q := fmt.Sprintf("matched: %v", m.pos)
+	b := m.ErrBuf.Bytes()
+	var q string
+	if len(b) != 0 {
+		q = fmt.Sprintf("matched: %v\nerrout: %q", m.pos, base64.RawStdEncoding.EncodeToString(b))
+	} else {
+		q = fmt.Sprintf("matched: %v", m.pos)
+	}
+
 	// todo: read again
 	return []byte(q), nil
 }

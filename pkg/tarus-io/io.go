@@ -34,7 +34,7 @@ func (n *nopCio) GetJudgeResult() (b []byte, err error) {
 		_ = n.closers[i].Close()
 	}
 	n.closers = nil
-	return nil, nil
+	return b, nil
 }
 
 func (n *nopCio) GetJudgeStatus(b []byte) (tarus.JudgeStatus, error) {

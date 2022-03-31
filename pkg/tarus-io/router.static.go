@@ -61,7 +61,9 @@ func (s *StaticRouter) RouteMemory(_ *url.URL) ChannelFactory {
 			return nil, err
 		}
 
-		return NewStd(r, native_judge.StrictMatch(r2), os.Stderr), nil
+		// todo: limit output buffer
+		m := native_judge.StrictMatch(r2)
+		return NewStd(r, m, &m.ErrBuf), nil
 	}
 }
 
@@ -81,6 +83,7 @@ func (s *StaticRouter) RouteFilesystem(fs *url.URL) (ChannelFactory, error) {
 			return nil, err
 		}
 
-		return NewStd(r, native_judge.StrictMatch(r2), os.Stderr), nil
+		m := native_judge.StrictMatch(r2)
+		return NewStd(r, m, &m.ErrBuf), nil
 	}, nil
 }
