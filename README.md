@@ -53,3 +53,12 @@ Response: []tarus_app.JudgeResult{
   ...
 }
 ```
+
+## Design
+
+The Judge Service is defined in GRPC Service, hence both embedded service and remote service are supported. And, the
+OCI Standard has been implemented as a tarus judge service (runtime), so most oci-runtime are available in this
+framework.
+
+![Arch](./docs/arch.svg)
+
