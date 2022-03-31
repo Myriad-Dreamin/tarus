@@ -7,6 +7,7 @@ var (
 	bucketKeyObjectSession = []byte("session")
 
 	bucketKeyStatus      = []byte("status")
+	bucketKeyWorkerId    = []byte("worker_id")
 	bucketKeyContainerId = []byte("container_id")
 	bucketKeyBinTarget   = []byte("bin_target")
 	bucketKeyWorkdir     = []byte("workdir")

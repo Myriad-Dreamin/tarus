@@ -15,8 +15,9 @@ message OCIJudgeSession {
   google.protobuf.Timestamp updated_at = 2;
 
   int32 commit_status = 3;
-  string container_id = 4;
-  string bin_target = 5;
+  int32 worker_id = 4;
+  string container_id = 5;
+  string bin_target = 6;
 
   string host_workdir = 101;
 }

@@ -160,14 +160,24 @@ func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *ta
 
 func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, request *tarus.CreateContainerRequest) (_ *emptypb.Empty, err error) {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
+
+	// prepare image
 	snapshotter := containerd.DefaultSnapshotter
 	if err = c.prepareImageOnSnapshotter(ctx, request.ImageId, snapshotter); err != nil {
 		return nil, err
 	}
+	image, err := c.client.GetImage(ctx, request.ImageId)
+	if err != nil {
+		return nil, err
+	}
 
-	fixedContainerId := fmt.Sprintf("tarus-engine-snapshot%d", 0)
-	fixedContainerSnapshotId := fmt.Sprintf("tarus-engine-snapshot%d", 0)
+	// generate config used by worker
+	ctrId := <-c.ccLimiter
+	fixedContainerId := fmt.Sprintf("tarus-engine-snapshot%d", ctrId)
+	fixedContainerSnapshotId := fmt.Sprintf("tarus-engine-snapshot%d", ctrId)
+	fixedWorkDir := strings.ReplaceAll(c.options.JudgeWorkdir, "{cid}", strconv.Itoa(ctrId))
 
+	// clear container in daemon
 	if err = c.client.SnapshotService(snapshotter).Remove(ctx, fixedContainerSnapshotId); err != nil && !errdefs.IsNotFound(err) {
 		return nil, err
 	}
@@ -175,13 +185,9 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 		return nil, err
 	}
 
-	image, err := c.client.GetImage(ctx, request.ImageId)
-	if err != nil {
-		return nil, err
-	}
+	// prepare mount options
 	mounts := make([]specs.Mount, 0)
-
-	m, err := filepath.Abs("./data/workdir-judge-engine0")
+	m, err := filepath.Abs(fixedWorkDir)
 	if err != nil {
 		return nil, err
 	}
@@ -216,8 +222,9 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 	var session = tarus.OCIJudgeSession{
 		CommitStatus: 0,
 		ContainerId:  fixedContainerId,
+		HostWorkdir:  fixedWorkDir,
+		WorkerId:     int32(ctrId),
 		BinTarget:    request.GetBinTarget(),
-		HostWorkdir:  "/workdir",
 	}
 	err = c.sessionStore.SetJudgeSession(ctx, request.TaskKey, &session)
 	if err != nil {
@@ -229,8 +236,17 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 
 func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, request *tarus.RemoveContainerRequest) (*emptypb.Empty, error) {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
-	fixedContainerId := fmt.Sprintf("tarus-engine-snapshot%d", 0)
-	cc, err := c.client.LoadContainer(ctx, fixedContainerId)
+
+	// todo, detect workload atomic
+
+	session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
+	if err != nil {
+		return nil, err
+	}
+
+	c.ccLimiter <- int(session.WorkerId)
+
+	cc, err := c.client.LoadContainer(ctx, session.ContainerId)
 	if err != nil {
 		return nil, err
 	}
@@ -245,29 +261,37 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 	return new(emptypb.Empty), nil
 }
 
+func getOrDefault(L, R int64) int64 {
+	if L != 0 {
+		return L
+	}
+	return R
+}
+
 func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*tarus.MakeJudgeResponse, error) {
 	ctx := namespaces.WithNamespace(rawCtx, "tarus")
 
-	fixedContainerId := "tarus-engine-snapshot0"
-	cc, err := c.client.LoadContainer(ctx, fixedContainerId)
+	session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
 	if err != nil {
 		return nil, err
 	}
+
+	cc, err := c.client.LoadContainer(ctx, session.ContainerId)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo: config cgroup
+	s, err := cc.Spec(ctx)
+	if err != nil {
+		return nil, err
+	}
+	procTmpl := *s.Process
 
 	var resp = new(tarus.MakeJudgeResponse)
 	for i := range request.Testcases {
 		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
 			// fmt.Printf("linux container create successfully\n")
-			s, err := cc.Spec(ctx)
-			if err != nil {
-				return err
-			}
-			procTmpl := *s.Process
-
-			session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
-			if err != nil {
-				return err
-			}
 
 			var judgePoint = request.Testcases[i]
 			procOpts := procTmpl

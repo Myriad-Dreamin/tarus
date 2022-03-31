@@ -112,35 +112,46 @@ func readSession(meta *tarus.OCIJudgeSession, bkt *bolt.Bucket) error {
 		meta.HostWorkdir = string(b)
 	}
 	if b := bkt.Get(bucketKeyStatus); b != nil {
-		statusDecoded, err := decodeInt32(b)
+		decoded, err := decodeInt32(b)
 		if err != nil {
 			return err
 		}
-		meta.CommitStatus = statusDecoded
+		meta.CommitStatus = decoded
+	}
+	if b := bkt.Get(bucketKeyWorkerId); b != nil {
+		decoded, err := decodeInt32(b)
+		if err != nil {
+			return err
+		}
+		meta.WorkerId = decoded
 	}
 
 	return nil
 }
 
-func writeSession(meta *tarus.OCIJudgeSession, bkt *bolt.Bucket) error {
-	if err := writeTimestamps(bkt, meta.CreatedAt.AsTime(), meta.UpdatedAt.AsTime()); err != nil {
-		return err
+func writeSession(meta *tarus.OCIJudgeSession, bkt *bolt.Bucket) (err error) {
+	if err = writeTimestamps(bkt, meta.CreatedAt.AsTime(), meta.UpdatedAt.AsTime()); err != nil {
+		return
 	}
-	if err := bkt.Put(bucketKeyContainerId, []byte(meta.ContainerId)); err != nil {
-		return err
+	if err = bkt.Put(bucketKeyContainerId, []byte(meta.ContainerId)); err != nil {
+		return
 	}
-	if err := bkt.Put(bucketKeyBinTarget, []byte(meta.BinTarget)); err != nil {
-		return err
+	if err = bkt.Put(bucketKeyBinTarget, []byte(meta.BinTarget)); err != nil {
+		return
 	}
-	if err := bkt.Put(bucketKeyWorkdir, []byte(meta.HostWorkdir)); err != nil {
-		return err
-	}
-
-	// Write size
-	statusEncoded, err := encodeInt32(meta.CommitStatus)
-	if err != nil {
-		return err
+	if err = bkt.Put(bucketKeyWorkdir, []byte(meta.HostWorkdir)); err != nil {
+		return
 	}
 
-	return bkt.Put(bucketKeyStatus, statusEncoded)
+	if encoded, err := encodeInt32(meta.CommitStatus); err != nil {
+		return err
+	} else if err = bkt.Put(bucketKeyStatus, encoded); err != nil {
+		return err
+	}
+	if encoded, err := encodeInt32(meta.WorkerId); err != nil {
+		return err
+	} else if err = bkt.Put(bucketKeyWorkerId, encoded); err != nil {
+		return err
+	}
+	return nil
 }
