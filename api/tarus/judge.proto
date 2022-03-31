@@ -89,6 +89,10 @@ message MakeJudgeRequest {
   string io_provider = 2;
   repeated JudgeTestcase testcases = 3;
   bool is_async = 101;
+  int64 cputime = 102;
+  int64 cpuhard = 103;
+  int64 memory = 104;
+  int64 stack = 105;
 }
 
 message MakeJudgeResponse {

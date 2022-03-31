@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
 	tarus_io "github.com/Myriad-Dreamin/tarus/pkg/tarus-io"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
@@ -24,6 +25,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -287,6 +290,10 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 		return nil, err
 	}
 	procTmpl := *s.Process
+	reqLevelCpuhard := getOrDefault(request.Cpuhard, int64(15*time.Second))
+	reqLevelCputime := getOrDefault(request.Cputime, int64(10*time.Second))
+	reqLevelMemory := getOrDefault(request.Memory, int64(1024*hr_bytes.MB))
+	reqLevelStack := getOrDefault(request.Stack, int64(1024*hr_bytes.MB))
 
 	var resp = new(tarus.MakeJudgeResponse)
 	for i := range request.Testcases {
@@ -311,6 +318,44 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 			fac, err := ioc(judgePoint.Input, judgePoint.Answer)
 			if err != nil {
 				return err
+			}
+
+			cpuhard := getOrDefault(judgePoint.EstimatedCpuhard, reqLevelCpuhard)
+			cputime := getOrDefault(judgePoint.EstimatedCputime, reqLevelCputime)
+			memory := getOrDefault(judgePoint.EstimatedMemory, reqLevelMemory)
+			stack := getOrDefault(judgePoint.EstimatedStack, reqLevelStack)
+
+			// todo: check default rlimit, check rlimit_core
+			if len(procOpts.Rlimits) != 0 {
+				procOpts.Rlimits = procOpts.Rlimits[:0]
+			}
+
+			if cputime > 1 || cpuhard > 1 {
+				if cputime > 1 && cpuhard > 1 {
+					procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
+						Type: "RLIMIT_CPU",
+						Soft: uint64(cputime),
+						Hard: uint64(cpuhard),
+					})
+				} else {
+					return errors.New("both cpu hard and cpu time should be set at the same time")
+				}
+			}
+
+			if memory > 1 {
+				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
+					Type: "RLIMIT_DATA",
+					Soft: uint64(memory),
+					Hard: uint64(memory + (32 * int64(hr_bytes.MB))),
+				})
+			}
+
+			if stack > 1 {
+				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
+					Type: "RLIMIT_STACK",
+					Soft: uint64(stack),
+					Hard: uint64(stack + (32 * int64(hr_bytes.MB))),
+				})
 			}
 
 			err = (func() error {
@@ -383,7 +428,7 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 						return err
 					}
 					resp.Items = append(resp.Items, qr)
-				case <-time.After(time.Second * 3):
+				case <-time.After(time.Duration(cpuhard) * time.Nanosecond):
 					fmt.Printf("linux container timeout stop\n")
 				}
 
