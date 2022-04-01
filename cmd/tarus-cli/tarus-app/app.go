@@ -8,8 +8,6 @@ import (
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"io"
-	"os"
-	"path/filepath"
 )
 
 type Client struct {
@@ -35,18 +33,12 @@ func New() *cli.App {
 		commandEnvBuild,
 	}
 
-	h, _ := os.UserHomeDir()
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "enable debug output in logs",
 		},
-		cli.StringFlag{
-			Name:   "address, a",
-			Usage:  "address for tarus service's GRPC server",
-			Value:  filepath.Join(h, ".config/tarus/service.sock"),
-			EnvVar: "TARUS_SERVICE_ADDRESS",
-		},
+		appFlagServiceAddr,
 		appFlagDriver,
 	}
 	var c = new(Client)
