@@ -86,29 +86,43 @@ func (c *Client) inject(commands []cli.Command) (cc []cli.Command) {
 	return commands
 }
 
-func (c Command) WithInitService() Command {
-	a, b := c.After, c.Before
-	c.Before = func(args *cli.Context) error {
-		if a != nil {
-			if err := a(args); err != nil {
-				return err
-			}
+func hookBefore(before, afterBefore cli.BeforeFunc) cli.BeforeFunc {
+	if before == nil {
+		return afterBefore
+	}
+	return func(args *cli.Context) error {
+		if err := before(args); err != nil {
+			return err
 		}
+		return afterBefore(args)
+	}
+}
+
+func hookAfter(after, beforeAfter cli.AfterFunc) cli.AfterFunc {
+	if after == nil {
+		return beforeAfter
+	}
+	return func(args *cli.Context) error {
+		if err := beforeAfter(args); err != nil {
+			_ = after(args)
+			return err
+		}
+		return after(args)
+	}
+}
+
+func (c Command) WithInitService() Command {
+	c.Before = hookBefore(c.Before, func(args *cli.Context) error {
 		c := args.App.Metadata["$client"].(*Client)
 		return c.initService(args)
-	}
-	c.After = func(args *cli.Context) (err error) {
-		if b != nil {
-			err = b(args)
-		}
+	})
+	c.After = hookAfter(c.After, func(args *cli.Context) (err error) {
 		c := args.App.Metadata["$client"].(*Client)
 		if c.grpcConn != nil {
-			if err == nil {
-				err = c.grpcConn.Close()
-			}
+			err = c.grpcConn.Close()
 		}
 		return
-	}
+	})
 	return c
 }
 
