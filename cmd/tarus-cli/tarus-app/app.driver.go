@@ -6,6 +6,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"strings"
+
+	// put for initializing tarus driver registration
+	_ "github.com/Myriad-Dreamin/tarus/pkg/tarus-driver/domjudge"
 )
 
 var appFlagDriver = cli.StringFlag{

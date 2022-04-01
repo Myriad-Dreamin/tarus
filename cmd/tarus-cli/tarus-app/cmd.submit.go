@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
-	domjudge_driver "github.com/Myriad-Dreamin/tarus/pkg/tarus-driver/domjudge"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	"github.com/k0kubun/pp/v3"
 	"github.com/urfave/cli"
@@ -24,18 +23,18 @@ var commandSubmit = Command{
 }.WithInitService().WithInitDriver()
 
 func actSubmit(c *Client, _ *cli.Context) error {
-	var err error
+	var (
+		err error
+		ctx = context.Background()
+		svc = tarus_judge.NewClientAdaptor(c.grpcClient)
+	)
 
-	client := c.grpcClient
-
-	desc, err := domjudge_driver.CreateLocalJudgeRequest("fuzzers/corpora/domjudge/bapc2019-A")
+	desc, err := c.Driver.CreateJudgeRequest(ctx)
 	if err != nil {
 		return err
 	}
 
-	var ctx = context.Background()
-
-	resp, err := tarus_judge.TransientJudge(tarus_judge.NewClientAdaptor(client), ctx, &tarus_judge.TransientJudgeRequest{
+	resp, err := tarus_judge.TransientJudge(svc, ctx, &tarus_judge.TransientJudgeRequest{
 		MakeJudgeRequest: desc,
 		ImageId:          "docker.io/library/ubuntu:20.04",
 		BinTarget:        "/workdir/bapc2019_a_accepted_test",
@@ -43,6 +42,7 @@ func actSubmit(c *Client, _ *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
 	type JudgeResult struct {
 		Index  string
 		Status string
