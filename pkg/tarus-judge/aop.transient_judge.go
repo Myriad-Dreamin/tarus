@@ -28,7 +28,7 @@ func TransientJudge(c tarus.JudgeServiceServer, rawCtx context.Context, rawReq *
 		return nil, errors.Wrap(errdefs.ErrInvalidArgument, "req.MakeJudgeRequest is required")
 	}
 	if (len(req.BinTarget) == 0) == (len(req.CompileFile) == 0) {
-		return nil, errors.Wrap(errdefs.ErrInvalidArgument, "req.BinTarget/CompileFile arguemnt conflicts")
+		return nil, errors.Wrap(errdefs.ErrInvalidArgument, "req.BinTarget/CompileFile argument conflicts")
 	}
 	binTarget := req.BinTarget
 	req.BinTarget = "/workdir/judging-program"
