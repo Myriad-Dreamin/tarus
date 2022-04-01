@@ -8,6 +8,7 @@ import (
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	"github.com/k0kubun/pp/v3"
 	"github.com/urfave/cli"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -34,10 +35,12 @@ func actSubmit(c *Client, _ *cli.Context) error {
 		return err
 	}
 
+	binTarget, _ := filepath.Abs("data/workdir-judge-engine0/bapc2019_a_accepted_test")
+
 	resp, err := tarus_judge.TransientJudge(svc, ctx, &tarus_judge.TransientJudgeRequest{
 		MakeJudgeRequest: desc,
 		ImageId:          "docker.io/library/ubuntu:20.04",
-		BinTarget:        "/workdir/bapc2019_a_accepted_test",
+		BinTarget:        binTarget,
 	})
 	if err != nil {
 		return err
