@@ -59,6 +59,8 @@ message CopyFileRequest {
   bytes task_key = 1;
   string from_url = 2;
   string to_path = 3;
+
+  bool override_file = 101;
 }
 
 message CompileProgramRequest {
@@ -68,6 +70,7 @@ message CompileProgramRequest {
   string compile_target = 101;
   // temporal open or close several compile flags such as asan, O0, O1, O2, O3
   repeated string compile_features = 102;
+  bool override_file = 103;
 }
 
 message JudgeTestcase {

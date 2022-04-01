@@ -54,9 +54,10 @@ func TransientJudge(c tarus.JudgeServiceServer, rawCtx context.Context, rawReq *
 
 		if len(binTarget) == 0 {
 			r, err := c.CompileProgram(rawCtx, &tarus.CompileProgramRequest{
-				TaskKey: req.TaskKey,
-				FromUrl: req.CompileFile,
-				ToPath:  req.BinTarget,
+				TaskKey:      req.TaskKey,
+				FromUrl:      req.CompileFile,
+				ToPath:       req.BinTarget,
+				OverrideFile: true,
 			})
 			if err != nil {
 				return err
@@ -64,9 +65,10 @@ func TransientJudge(c tarus.JudgeServiceServer, rawCtx context.Context, rawReq *
 			fmt.Println(r)
 		} else {
 			r, err := c.CopyFile(rawCtx, &tarus.CopyFileRequest{
-				TaskKey: req.TaskKey,
-				FromUrl: binTarget,
-				ToPath:  req.BinTarget,
+				TaskKey:      req.TaskKey,
+				FromUrl:      binTarget,
+				ToPath:       req.BinTarget,
+				OverrideFile: true,
 			})
 			if err != nil {
 				return err
