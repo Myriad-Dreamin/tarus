@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -14,7 +15,9 @@ type ActionFunc = func(c *Client, args *cli.Context) error
 type Command cli.Command
 
 type Client struct {
-	grpcConn   *grpc.ClientConn
+	closers  []io.Closer
+	grpcConn *grpc.ClientConn
+
 	grpcClient tarus.JudgeServiceClient
 }
 
@@ -55,6 +58,16 @@ func New() *cli.App {
 
 		args.App.Metadata["$client"] = c
 		return nil
+	}
+	app.After = func(args *cli.Context) (err error) {
+		c := args.App.Metadata["$client"].(*Client)
+		for i := range c.closers {
+			err2 := c.closers[i].Close()
+			if err2 != nil {
+				err = err2
+			}
+		}
+		return
 	}
 
 	return app
@@ -115,13 +128,6 @@ func (c Command) WithInitService() Command {
 	c.Before = hookBefore(c.Before, func(args *cli.Context) error {
 		c := args.App.Metadata["$client"].(*Client)
 		return c.initService(args)
-	})
-	c.After = hookAfter(c.After, func(args *cli.Context) (err error) {
-		c := args.App.Metadata["$client"].(*Client)
-		if c.grpcConn != nil {
-			err = c.grpcConn.Close()
-		}
-		return
 	})
 	return c
 }

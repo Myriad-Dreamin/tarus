@@ -49,6 +49,7 @@ func (c *Client) initService(args *cli.Context) (err error) {
 	c.grpcConn, err = c.connectToGrpcService(args)
 	if err == nil {
 		c.grpcClient = tarus.NewJudgeServiceClient(c.grpcConn)
+		c.closers = append(c.closers, c.grpcConn)
 	}
 	return
 }
