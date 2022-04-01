@@ -45,7 +45,11 @@ func TransientJudge(c tarus.JudgeServiceServer, rawCtx context.Context, rawReq *
 		req.TaskKey = key
 	}
 
-	err = WithContainerEnvironment(c, rawCtx, req, func(rawCtx context.Context, req *TransientJudgeRequest) error {
+	err = WithContainerEnvironment(c, rawCtx, &WithContainerRequest{
+		TaskKey:   req.TaskKey,
+		ImageId:   req.ImageId,
+		BinTarget: req.BinTarget,
+	}, func(rawCtx context.Context) error {
 		req.IsAsync = false
 
 		if len(binTarget) == 0 {

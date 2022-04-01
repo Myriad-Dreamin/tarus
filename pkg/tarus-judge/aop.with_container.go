@@ -5,20 +5,16 @@ import (
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 )
 
-func WithContainerEnvironment(
-	c tarus.JudgeServiceServer, rawCtx context.Context, req *TransientJudgeRequest, cb func(rawCtx context.Context, req *TransientJudgeRequest) error) (err error) {
-	_, err = c.CreateContainer(rawCtx, &tarus.CreateContainerRequest{
-		ImageId: req.ImageId,
-		TaskKey: req.TaskKey,
+type WithContainerRequest = tarus.CreateContainerRequest
 
-		BinTarget: req.BinTarget,
-	})
+func WithContainerEnvironment(
+	c tarus.JudgeServiceServer, rawCtx context.Context, req *WithContainerRequest, cb func(rawCtx context.Context) error) (err error) {
+	_, err = c.CreateContainer(rawCtx, req)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		err2 := err
-		// todo: task key
 		_, err = c.RemoveContainer(rawCtx, &tarus.RemoveContainerRequest{
 			TaskKey: req.TaskKey,
 		})
@@ -27,6 +23,6 @@ func WithContainerEnvironment(
 		}
 	}()
 
-	err = cb(rawCtx, req)
+	err = cb(rawCtx)
 	return err
 }
