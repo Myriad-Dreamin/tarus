@@ -163,6 +163,10 @@ func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *ta
 	return c.UnimplementedJudgeServiceServer.CopyFile(ctx, request)
 }
 
+func (c *ContainerdJudgeServiceServer) CompileProgram(ctx context.Context, request *tarus.CompileProgramRequest) (*emptypb.Empty, error) {
+	return c.UnimplementedJudgeServiceServer.CompileProgram(ctx, request)
+}
+
 func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, request *tarus.CreateContainerRequest) (_ *emptypb.Empty, err error) {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
 
