@@ -22,8 +22,10 @@ INFO[2022-03-31T03:38:38.254096571+08:00] Start streaming server
 $ git clone https://github.com/Myriad-Dreamin/tarus
 $ cd tarus
 $ go run ./cmd/tarus # run tarus service
-$ go run ./cmd/tarus-cli submit --driver domjudge,problem=fuzzers/corpora/domjudge/bapc2019-A \
-   submission=fuzzers/corpora/domjudge/bapc2019-A/submissions/accepted/nicky.cpp # run tarus client, served by tarus daemon
+$ go run ./cmd/tarus-cli submit \
+    --driver domjudge,problem=fuzzers/corpora/domjudge/bapc2019-A \
+    --submission fuzzers/corpora/domjudge/bapc2019-A/submissions/accepted/nicky.cpp
+# run tarus client, served by tarus daemon
 Response: []tarus_app.JudgeResult{
   tarus_app.JudgeResult{
     Index:  "0:AAA",
@@ -43,8 +45,11 @@ Response: []tarus_app.JudgeResult{
     Status: "Accepted/150ms/191ms/9.469MB",
   },
 }
-$ go run ./cmd/tarus-cli submit --integrated-service oci:containerd --driver domjudge,problem=fuzzers/corpora/domjudge/bapc2019-A \
-   submission=fuzzers/corpora/domjudge/bapc2019-A/submissions/accepted/nicky.cpp # embedded tarus service 
+$ go run ./cmd/tarus-cli submit \
+    --integrated-service oci:containerd \
+    --driver domjudge,problem=fuzzers/corpora/domjudge/bapc2019-A \
+    --submission fuzzers/corpora/domjudge/bapc2019-A/submissions/accepted/nicky.cpp
+# embedded tarus service  
 Response: []tarus_app.JudgeResult{
   tarus_app.JudgeResult{
     Index:  "0:AAA",
