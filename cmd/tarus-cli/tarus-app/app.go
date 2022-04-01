@@ -30,7 +30,7 @@ func New() *cli.App {
 		commandStatus,
 		commandService,
 		commandSubmit,
-		commandEnvBuild,
+		commandEnv,
 	}
 
 	app.Flags = []cli.Flag{

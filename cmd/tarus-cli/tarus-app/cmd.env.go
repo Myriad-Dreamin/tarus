@@ -5,7 +5,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var commandEnvBuild = Command{
+var commandEnv = Command{
 	Name:  "env",
 	Usage: "environment management",
 	Subcommands: []cli.Command{
