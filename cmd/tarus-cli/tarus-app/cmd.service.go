@@ -21,11 +21,11 @@ var commandService = Command{
 	},
 }.WithInitService()
 
-func actServiceStatus(c *Client, _ *cli.Context) error {
+func actServiceStatus(c *Client, args *cli.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	resp, err := c.grpcClient.Handshake(ctx, &tarus.HandshakeRequest{
-		ApiVersion: []byte("v0.0.0"),
+		ApiVersion: []byte(args.App.Version),
 	})
 	if err != nil {
 		return err
