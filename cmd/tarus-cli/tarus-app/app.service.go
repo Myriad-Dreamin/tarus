@@ -15,8 +15,10 @@ var appFlagServiceAddr = cli.StringFlag{
 }
 
 func init() {
-	h, _ := os.UserHomeDir()
-	appFlagServiceAddr.Value = filepath.Join(h, ".config/tarus/service.sock")
+	appFlagServiceAddr.Value = ".config/tarus/service.sock"
+	if h, _ := os.UserHomeDir(); len(h) != 0 {
+		appFlagServiceAddr.Value = filepath.Join(h, appFlagServiceAddr.Value)
+	}
 }
 
 func (c *Client) initService(args *cli.Context) (err error) {
