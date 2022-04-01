@@ -2,6 +2,7 @@ package tarus_app
 
 import (
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	tarus_driver "github.com/Myriad-Dreamin/tarus/pkg/tarus-driver"
 	"github.com/k0kubun/pp/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -19,6 +20,7 @@ type Client struct {
 	grpcConn *grpc.ClientConn
 
 	grpcClient tarus.JudgeServiceClient
+	Driver     tarus_driver.Driver
 }
 
 func New() *cli.App {
@@ -48,6 +50,7 @@ func New() *cli.App {
 			Value:  filepath.Join(h, ".config/tarus/service.sock"),
 			EnvVar: "TARUS_SERVICE_ADDRESS",
 		},
+		appFlagDriver,
 	}
 	var c = new(Client)
 	app.Commands = append(app.Commands, c.inject(toCliCommands(tarusCommands))...)
@@ -128,6 +131,21 @@ func (c Command) WithInitService() Command {
 	c.Before = hookBefore(c.Before, func(args *cli.Context) error {
 		c := args.App.Metadata["$client"].(*Client)
 		return c.initService(args)
+	})
+	return c
+}
+
+func (c Command) WithInitDriver() Command {
+	c.Before = hookBefore(c.Before, func(args *cli.Context) error {
+		c := args.App.Metadata["$client"].(*Client)
+
+		if err := c.initDriver(args.GlobalString("driver")); err != nil {
+			return err
+		}
+		if err := c.initDriver(args.String("driver")); err != nil {
+			return err
+		}
+		return nil
 	})
 	return c
 }

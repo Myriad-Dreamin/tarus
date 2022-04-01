@@ -18,7 +18,10 @@ var commandSubmit = Command{
 	Name:   "submit",
 	Usage:  "judge submission",
 	Action: actSubmit,
-}.WithInitService()
+	Flags: []cli.Flag{
+		appFlagDriver,
+	},
+}.WithInitService().WithInitDriver()
 
 func actSubmit(c *Client, _ *cli.Context) error {
 	var err error
