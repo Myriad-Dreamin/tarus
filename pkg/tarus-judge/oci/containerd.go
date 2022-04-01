@@ -160,7 +160,53 @@ func (c *ContainerdJudgeServiceServer) Handshake(_ context.Context, request *tar
 }
 
 func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *tarus.CopyFileRequest) (*emptypb.Empty, error) {
-	return c.UnimplementedJudgeServiceServer.CopyFile(ctx, request)
+	ctx = namespaces.WithNamespace(ctx, "tarus")
+
+	session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
+	if err != nil {
+		return nil, err
+	}
+
+	targetPath, err := filepath.Rel("/workdir", request.ToPath)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(targetPath, "..") {
+		return nil, status.Errorf(codes.InvalidArgument, "to path not startswith /workdir")
+	}
+
+	targetPath = filepath.Join(session.HostWorkdir, targetPath)
+
+	if _, err := os.Stat(targetPath); err == nil {
+		if !request.OverrideFile {
+			return nil, errors.New("file exists")
+		}
+	}
+
+	// todo: check path security
+
+	dst, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = dst.Close()
+	}()
+
+	src, err := os.OpenFile(request.FromUrl, os.O_RDONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = src.Close()
+	}()
+
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(emptypb.Empty), nil
 }
 
 func (c *ContainerdJudgeServiceServer) CompileProgram(ctx context.Context, request *tarus.CompileProgramRequest) (*emptypb.Empty, error) {
