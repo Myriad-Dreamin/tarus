@@ -159,7 +159,7 @@ func (c *ContainerdJudgeServiceServer) Handshake(_ context.Context, request *tar
 	}, nil
 }
 
-func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *tarus.CopyRequest) (*emptypb.Empty, error) {
+func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *tarus.CopyFileRequest) (*emptypb.Empty, error) {
 	return c.UnimplementedJudgeServiceServer.CopyFile(ctx, request)
 }
 

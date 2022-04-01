@@ -55,7 +55,7 @@ message CheckContainerRequest {
   bytes extras = 4;
 }
 
-message CopyRequest {
+message CopyFileRequest {
   bytes task_key = 1;
   string from_url = 2;
   string to_path = 3;
@@ -205,7 +205,7 @@ service JudgeService {
   // Judge Program (Compile it).
   //   please notice that the container environment is prepared by container bundle.
   // copy binary is dangerous, but one can use this api to upload program.
-  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  rpc CopyFile(CopyFileRequest) returns (google.protobuf.Empty);
   // compile by the judge service with security checking
   rpc CompileProgram(CompileProgramRequest) returns (google.protobuf.Empty);
 

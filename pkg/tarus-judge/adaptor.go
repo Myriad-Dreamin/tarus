@@ -39,7 +39,7 @@ func (c *ClientAdaptor) CheckContainer(ctx context.Context, request *tarus.Check
 	return c.c.CheckContainer(ctx, request)
 }
 
-func (c *ClientAdaptor) CopyFile(ctx context.Context, request *tarus.CopyRequest) (*emptypb.Empty, error) {
+func (c *ClientAdaptor) CopyFile(ctx context.Context, request *tarus.CopyFileRequest) (*emptypb.Empty, error) {
 	return c.c.CopyFile(ctx, request)
 }
 

@@ -79,7 +79,7 @@ service JudgeService::Compiler { // compiler implementation
   rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
   rpc CreateContainer(CreateContainerRequest) returns (google.protobuf.Empty);
   rpc RemoveContainer(RemoveContainerRequest) returns (google.protobuf.Empty);
-  rpc CopyFile(CopyRequest) returns (google.protobuf.Empty);
+  rpc CopyFile(CopyFileRequest) returns (google.protobuf.Empty);
   rpc CompileProgram(CompileProgramRequest) returns (google.protobuf.Empty);
 }
 
