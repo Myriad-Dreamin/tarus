@@ -180,7 +180,7 @@ func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *ta
 
 	// todo: check path security
 
-	dst, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	dst, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0700)
 	if err != nil {
 		return nil, err
 	}
