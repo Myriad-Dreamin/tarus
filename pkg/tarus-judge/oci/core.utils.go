@@ -74,6 +74,13 @@ func analysisContainerSignal(code uint32, oup []byte) os.Signal {
 	return nil
 }
 
+func getOrDefault(L, R int64) int64 {
+	if L != 0 {
+		return L
+	}
+	return R
+}
+
 type JudgeEnvironment struct {
 	ProcessSpec    specs.Process
 	MemoryLimit    int64

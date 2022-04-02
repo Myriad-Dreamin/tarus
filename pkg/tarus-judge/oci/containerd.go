@@ -311,17 +311,6 @@ func (c *ContainerdJudgeServiceServer) RemoveContainer(ctx context.Context, requ
 	return new(emptypb.Empty), nil
 }
 
-func getOrDefault(L, R int64) int64 {
-	if L != 0 {
-		return L
-	}
-	return R
-}
-
-type Rep struct {
-	ErrOut []byte `yaml:"errout"`
-}
-
 func (c *ContainerdJudgeServiceServer) runJudgeTask(
 	ctx context.Context, container containerd.Container, judgeEnv *JudgeEnvironment, judgeMetric *JudgeMetric) error {
 	return c.withFreshTask(ctx, container, func(t containerd.Task) error {
