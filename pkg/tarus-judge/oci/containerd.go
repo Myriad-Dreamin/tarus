@@ -121,15 +121,17 @@ func NewContainerdServer(options ...ContainerdJudgeOption) (svc *ContainerdJudge
 	if err != nil {
 		return
 	}
+	svc.closers = append(svc.closers, b)
+
 	svc.sessionStore = tarus_store.NewJudgeSessionStore(tarus_store.NewDB(b))
 	if svc.sessionStore == nil {
 		err = errors.Wrapf(errdefs.ErrInvalidArgument, "session store not filled")
 		return
 	}
-
 	if c, ok := svc.sessionStore.(io.Closer); ok {
 		svc.closers = append(svc.closers, c)
 	}
+
 	return
 }
 

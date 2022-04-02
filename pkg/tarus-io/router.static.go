@@ -80,6 +80,7 @@ func (s *StaticRouter) RouteFilesystem(fs *url.URL) (ChannelFactory, error) {
 		}
 		r2, err := os.Open(filepath.Join(p, oup))
 		if err != nil {
+			_ = r.Close()
 			return nil, err
 		}
 
