@@ -322,6 +322,54 @@ type Rep struct {
 	ErrOut []byte `yaml:"errout"`
 }
 
+func (c *ContainerdJudgeServiceServer) runJudgeTask(
+	ctx context.Context, container containerd.Container, judgeEnv *JudgeEnvironment, judgeMetric *JudgeMetric) error {
+	return c.withFreshTask(ctx, container, func(t containerd.Task) error {
+		process, err := t.Exec(ctx, "judge_exec", &judgeEnv.ProcessSpec, judgeEnv.JudgeIO.AsCreator())
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_, _ = process.Delete(ctx)
+		}()
+
+		statusC, err := process.Wait(ctx)
+		if err != nil {
+			return err
+		}
+
+		judgeMetric.StartedAt = time.Now()
+		if err := process.Start(ctx); err != nil {
+			return err
+		}
+		defer func() {
+			// todo: check process status
+			_ = c.killProcess(ctx, process)
+		}()
+
+		var st containerd.ExitStatus
+
+		select {
+		case st = <-statusC:
+			judgeMetric.IsTimeout = false
+		case <-time.After(time.Duration(judgeEnv.CpuHard) * time.Nanosecond):
+			judgeMetric.IsTimeout = true
+		}
+
+		if judgeMetric.Code, judgeMetric.ExitedAt, err = st.Result(); err != nil {
+			return err
+		}
+		if judgeMetric.JudgeReport, err = judgeEnv.JudgeIO.GetJudgeResult(); err != nil {
+			return err
+		}
+		if judgeMetric.ContainerInfo, err = t.Metrics(ctx); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request *tarus.MakeJudgeRequest) (*tarus.MakeJudgeResponse, error) {
 	ctx := namespaces.WithNamespace(rawCtx, "tarus")
 
@@ -360,69 +408,21 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 	for _, judgePoint := range request.Testcases {
 		var judgeEnv JudgeEnvironment
 		var judgeMetric JudgeMetric
+		var qr = &tarus.QueryJudgeItem{
+			JudgeKey: judgePoint.JudgeKey,
+		}
+
 		if err = c.createProcSpec(ctx, &sessionEnv, &judgeEnv, judgePoint); err != nil {
 			return nil, err
 		}
-
-		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
-			process, err := t.Exec(ctx, "judge_exec", &judgeEnv.ProcessSpec, judgeEnv.JudgeIO.AsCreator())
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_, _ = process.Delete(ctx)
-			}()
-
-			statusC, err := process.Wait(ctx)
-			if err != nil {
-				return err
-			}
-
-			judgeMetric.StartedAt = time.Now()
-			if err := process.Start(ctx); err != nil {
-				return err
-			}
-			defer func() {
-				// todo: check process status
-				_ = c.killProcess(ctx, process)
-			}()
-
-			var st containerd.ExitStatus
-
-			select {
-			case st = <-statusC:
-				judgeMetric.IsTimeout = false
-			case <-time.After(time.Duration(judgeEnv.CpuHard) * time.Nanosecond):
-				judgeMetric.IsTimeout = true
-			}
-
-			if judgeMetric.Code, judgeMetric.ExitedAt, err = st.Result(); err != nil {
-				return err
-			}
-			if judgeMetric.JudgeReport, err = judgeEnv.JudgeIO.GetJudgeResult(); err != nil {
-				return err
-			}
-			if judgeMetric.ContainerInfo, err = t.Metrics(rawCtx); err != nil {
-				return err
-			}
-
-			return nil
-		})
-
-		if err != nil {
+		if err = c.runJudgeTask(ctx, cc, &judgeEnv, &judgeMetric); err != nil {
 			return nil, err
-		}
-
-		var qr = &tarus.QueryJudgeItem{
-			JudgeKey: judgePoint.JudgeKey,
 		}
 		if err = c.analysisJudgeResult(ctx, &judgeEnv, qr, &judgeMetric); err != nil {
 			return nil, err
 		}
+
 		resp.Items = append(resp.Items, qr)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return resp, nil
