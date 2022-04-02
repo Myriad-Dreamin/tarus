@@ -3,7 +3,6 @@ package oci_judge
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
@@ -12,10 +11,8 @@ import (
 	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
-	v1 "github.com/containerd/containerd/metrics/types/v1"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
-	"github.com/containerd/typeurl"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -25,10 +22,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -354,6 +349,8 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 	var resp = new(tarus.MakeJudgeResponse)
 	for i := range request.Testcases {
 		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
+			var judgeEnv JudgeEnvironment
+			var judgeMetric JudgeMetric
 			// fmt.Printf("linux container create successfully\n")
 
 			var judgePoint = request.Testcases[i]
@@ -375,219 +372,95 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 			if err != nil {
 				return err
 			}
+			judgeEnv.JudgeChecker = fac
 
-			cpuhard := getOrDefault(judgePoint.EstimatedCpuhard, reqLevelCpuhard)
-			cputime := getOrDefault(judgePoint.EstimatedCputime, reqLevelCputime)
-			memoryLimit := getOrDefault(judgePoint.EstimatedMemory, reqLevelMemory)
-			stackLimit := getOrDefault(judgePoint.EstimatedStack, reqLevelStack)
+			judgeEnv.CpuHard = getOrDefault(judgePoint.EstimatedCpuhard, reqLevelCpuhard)
+			judgeEnv.CpuTime = getOrDefault(judgePoint.EstimatedCputime, reqLevelCputime)
+			judgeEnv.MemoryLimit = getOrDefault(judgePoint.EstimatedMemory, reqLevelMemory)
+			judgeEnv.StackLimit = getOrDefault(judgePoint.EstimatedStack, reqLevelStack)
 
 			// todo: check default rlimit, check rlimit_core
 			if len(procOpts.Rlimits) != 0 {
 				procOpts.Rlimits = procOpts.Rlimits[:0]
 			}
 
-			if cputime > 1 || cpuhard > 1 {
-				if cputime > 1 && cpuhard > 1 {
+			if judgeEnv.CpuTime > 1 || judgeEnv.CpuHard > 1 {
+				if judgeEnv.CpuTime > 1 && judgeEnv.CpuHard > 1 {
 					procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
 						Type: "RLIMIT_CPU",
-						Soft: uint64(cputime),
-						Hard: uint64(cpuhard),
+						Soft: uint64(judgeEnv.CpuTime),
+						Hard: uint64(judgeEnv.CpuHard),
 					})
 				} else {
 					return errors.New("both cpu hard and cpu time should be set at the same time")
 				}
 			}
 
-			if memoryLimit > 1 {
+			if judgeEnv.MemoryLimit > 1 {
 				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
 					Type: "RLIMIT_DATA",
-					Soft: uint64(memoryLimit),
-					Hard: uint64(memoryLimit + (32 * int64(hr_bytes.MB))),
+					Soft: uint64(judgeEnv.MemoryLimit),
+					Hard: uint64(judgeEnv.MemoryLimit + (32 * int64(hr_bytes.MB))),
 				})
 			}
 
-			if stackLimit > 1 {
+			if judgeEnv.StackLimit > 1 {
 				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
 					Type: "RLIMIT_STACK",
-					Soft: uint64(stackLimit),
-					Hard: uint64(stackLimit + (32 * int64(hr_bytes.MB))),
+					Soft: uint64(judgeEnv.StackLimit),
+					Hard: uint64(judgeEnv.StackLimit + (32 * int64(hr_bytes.MB))),
 				})
 			}
 
-			err = (func() error {
-				process, err := t.Exec(ctx, "judge_exec", &procOpts, fac.AsCreator())
-				if err != nil {
-					return err
-				}
-				defer func() {
-					_, _ = process.Delete(ctx)
-				}()
+			process, err := t.Exec(ctx, "judge_exec", &procOpts, fac.AsCreator())
+			if err != nil {
+				return err
+			}
+			defer func() {
+				_, _ = process.Delete(ctx)
+			}()
 
-				statusC, err := process.Wait(ctx)
-				if err != nil {
-					return err
-				}
+			statusC, err := process.Wait(ctx)
+			if err != nil {
+				return err
+			}
 
-				var processStartTime = time.Now()
-				if err := process.Start(ctx); err != nil {
-					return err
-				}
-				defer func() {
-					// todo: check process status
-					_ = c.killProcess(ctx, process)
-				}()
+			judgeMetric.StartedAt = time.Now()
+			if err := process.Start(ctx); err != nil {
+				return err
+			}
+			defer func() {
+				// todo: check process status
+				_ = c.killProcess(ctx, process)
+			}()
 
-				var st containerd.ExitStatus
-				var processResult = func(hardTimeout bool) error {
-					var qr = &tarus.QueryJudgeItem{
-						JudgeKey: judgePoint.JudgeKey,
-					}
-					var jh JudgeHint
-					code, exitedAt, err := st.Result()
-					if err != nil {
-						return err
-					}
-					jh.Code = int(code)
-					if exitedAt.IsZero() {
-						qr.TimeUseHard = int64(time.Now().Sub(processStartTime) * time.Nanosecond)
-					} else {
-						qr.TimeUseHard = int64(exitedAt.Sub(processStartTime) * time.Nanosecond)
-					}
+			var st containerd.ExitStatus
 
-					s, err := fac.GetJudgeResult()
-					if err != nil {
-						return err
-					}
-					jh.CheckerResult = string(s)
+			select {
+			case st = <-statusC:
+				judgeMetric.IsTimeout = false
+			case <-time.After(time.Duration(judgeEnv.CpuHard) * time.Nanosecond):
+				judgeMetric.IsTimeout = true
+			}
 
-					m, err := t.Metrics(rawCtx)
-					if err != nil {
-						return err
-					}
+			var qr = &tarus.QueryJudgeItem{
+				JudgeKey: judgePoint.JudgeKey,
+			}
 
-					m0, err := typeurl.UnmarshalAny(m.Data)
-					if err != nil {
-						return err
-					}
-					if m2, ok := m0.(*v1.Metrics); ok {
-						//fmt.Printf("metrics cpu result: %v %v %v\n", m2.CPU.Usage.Total, m2.CPU.Usage.Kernel, m2.CPU.Usage.User)
-						//fmt.Printf("metrics memory result: %v %v %v\n", m2.Memory.Usage.Max, m2.Memory.Usage.Usage, m2.Memory.RSS)
-						qr.TimeUse = int64(m2.CPU.Usage.User)
-						qr.MemoryUse = int64(m2.Memory.Usage.Max)
-						if qr.MemoryUse < int64(m2.Memory.TotalRSS) {
-							qr.MemoryUse = int64(m2.Memory.TotalRSS)
-						}
-					} else {
-						fmt.Println("invalid type url for extracting metrics", m.Data.TypeUrl)
-					}
+			if judgeMetric.Code, judgeMetric.ExitedAt, err = st.Result(); err != nil {
+				return err
+			}
+			if judgeMetric.JudgeReport, err = judgeEnv.JudgeChecker.GetJudgeResult(); err != nil {
+				return err
+			}
+			if judgeMetric.ContainerInfo, err = t.Metrics(rawCtx); err != nil {
+				return err
+			}
+			if err = c.analysisJudgeResult(ctx, &judgeEnv, qr, &judgeMetric); err != nil {
+				return err
+			}
 
-					var sig os.Signal
-					if 128 < code && code < 128+0x20 {
-						sig = syscall.Signal(code - 128)
-					} else if code == 2 {
-						golangRepMapping := map[string]os.Signal{
-							"SIGABRT":   syscall.SIGABRT,
-							"SIGALRM":   syscall.SIGALRM,
-							"SIGBUS":    syscall.SIGBUS,
-							"SIGCHLD":   syscall.SIGCHLD,
-							"SIGCLD":    syscall.SIGCLD,
-							"SIGCONT":   syscall.SIGCONT,
-							"SIGFPE":    syscall.SIGFPE,
-							"SIGHUP":    syscall.SIGHUP,
-							"SIGILL":    syscall.SIGILL,
-							"SIGINT":    syscall.SIGINT,
-							"SIGIO":     syscall.SIGIO,
-							"SIGIOT":    syscall.SIGIOT,
-							"SIGKILL":   syscall.SIGKILL,
-							"SIGPIPE":   syscall.SIGPIPE,
-							"SIGPOLL":   syscall.SIGPOLL,
-							"SIGPROF":   syscall.SIGPROF,
-							"SIGPWR":    syscall.SIGPWR,
-							"SIGQUIT":   syscall.SIGQUIT,
-							"SIGSEGV":   syscall.SIGSEGV,
-							"SIGSTKFLT": syscall.SIGSTKFLT,
-							"SIGSTOP":   syscall.SIGSTOP,
-							"SIGSYS":    syscall.SIGSYS,
-							"SIGTERM":   syscall.SIGTERM,
-							"SIGTRAP":   syscall.SIGTRAP,
-							"SIGTSTP":   syscall.SIGTSTP,
-							"SIGTTIN":   syscall.SIGTTIN,
-							"SIGTTOU":   syscall.SIGTTOU,
-							"SIGUNUSED": syscall.SIGUNUSED,
-							"SIGURG":    syscall.SIGURG,
-							"SIGUSR1":   syscall.SIGUSR1,
-							"SIGUSR2":   syscall.SIGUSR2,
-							"SIGVTALRM": syscall.SIGVTALRM,
-							"SIGWINCH":  syscall.SIGWINCH,
-							"SIGXCPU":   syscall.SIGXCPU,
-							"SIGXFSZ":   syscall.SIGXFSZ,
-						}
-						golangRepCapture := regexp.MustCompile("SIG(?:ABRT|ALRM|BUS|CHLD|CLD|CONT|FPE|HUP|ILL|INT|IO|IOT|KILL|PIPE|POLL|PROF|PWR|QUIT|SEGV|STKFLT|STOP|SYS|TERM|TRAP|TSTP|TTIN|TTOU|UNUSED|URG|USR1|USR2|VTALRM|WINCH|XCPU|XFSZ)")
-						if trapped := golangRepCapture.FindString(jh.CheckerResult); len(trapped) != 0 {
-							sig = golangRepMapping[trapped]
-						}
-					}
-					if sig != nil {
-						jh.Signal = sig.String()
-					}
-
-					qr.Hint, err = json.Marshal(jh)
-					if err != nil {
-						return err
-					}
-
-					if qr.MemoryUse >= memoryLimit {
-						qr.Status = tarus.JudgeStatus_MemoryLimitExceed
-					} else if qr.TimeUseHard >= cputime+int64(time.Millisecond*50) || qr.TimeUse >= cputime+int64(time.Millisecond*50) {
-						qr.Status = tarus.JudgeStatus_TimeLimitExceed
-					}
-
-					if hardTimeout {
-						qr.Status = tarus.JudgeStatus_TimeLimitExceed
-					} else if sig != nil {
-						switch sig {
-						case syscall.SIGKILL:
-							if qr.Status == 0 {
-								qr.Status = tarus.JudgeStatus_RuntimeError
-							}
-						case syscall.SIGSYS:
-							qr.Status = tarus.JudgeStatus_SecurityPolicyViolation
-						case syscall.SIGABRT:
-							qr.Status = tarus.JudgeStatus_AssertionFailed
-						case syscall.SIGFPE:
-							qr.Status = tarus.JudgeStatus_FloatingPointException
-						// case syscall.SIGSEGV:
-						// case syscall.SIGILL:
-						default:
-							qr.Status = tarus.JudgeStatus_RuntimeError
-						}
-					} else if code != 0 {
-						qr.Status = tarus.JudgeStatus_RuntimeError
-					} else if qr.Status == 0 {
-						qr.Status, err = fac.GetJudgeStatus(s)
-						if err != nil {
-							return err
-						}
-					}
-
-					resp.Items = append(resp.Items, qr)
-					return nil
-				}
-
-				select {
-				case st = <-statusC:
-					if err = processResult(false); err != nil {
-						fmt.Println(err)
-					}
-				case <-time.After(time.Duration(cpuhard) * time.Nanosecond):
-					fmt.Printf("linux container timeout stop\n")
-					if err = processResult(true); err != nil {
-						fmt.Println(err)
-					}
-				}
-
-				return nil
-			})()
+			resp.Items = append(resp.Items, qr)
 			if err != nil {
 				return err
 			}
