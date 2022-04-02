@@ -330,7 +330,7 @@ func (c *ContainerdJudgeServiceServer) runJudgeTask(
 			return err
 		}
 		defer func() {
-			_, _ = process.Delete(ctx)
+			_, _ = process.Delete(ctx, containerd.WithProcessKill)
 		}()
 
 		statusC, err := process.Wait(ctx)
@@ -342,13 +342,8 @@ func (c *ContainerdJudgeServiceServer) runJudgeTask(
 		if err := process.Start(ctx); err != nil {
 			return err
 		}
-		defer func() {
-			// todo: check process status
-			_ = c.killProcess(ctx, process)
-		}()
 
 		var st containerd.ExitStatus
-
 		select {
 		case st = <-statusC:
 			judgeMetric.IsTimeout = false
