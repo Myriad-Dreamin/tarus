@@ -20,14 +20,27 @@ var commandSubmit = Command{
 	Action: actSubmit,
 	Flags: []cli.Flag{
 		appFlagDriver,
+		cli.StringFlag{
+			Name:     "submission, s",
+			Usage:    "source code or binary program",
+			Required: true,
+		},
+		cli.StringFlag{
+			Name:  "image",
+			Usage: "use container image",
+			Value: "docker.io/library/ubuntu:20.04",
+		},
 	},
 }.WithInitService().WithInitDriver()
 
-func actSubmit(c *Client, _ *cli.Context) error {
+func actSubmit(c *Client, args *cli.Context) error {
 	var (
 		err error
 		ctx = context.Background()
 		svc = tarus_judge.NewClientAdaptor(c.grpcClient)
+
+		codePath = args.String("submission")
+		imageId  = args.String("image")
 	)
 
 	desc, err := c.Driver.CreateJudgeRequest(ctx)
@@ -35,11 +48,14 @@ func actSubmit(c *Client, _ *cli.Context) error {
 		return err
 	}
 
-	binTarget, _ := filepath.Abs("data/workdir-judge-engine0/bapc2019_a_accepted_test")
+	binTarget, err := filepath.Abs(codePath)
+	if err != nil {
+		return err
+	}
 
 	resp, err := tarus_judge.TransientJudge(svc, ctx, &tarus_judge.TransientJudgeRequest{
 		MakeJudgeRequest: desc,
-		ImageId:          "docker.io/library/ubuntu:20.04",
+		ImageId:          imageId,
 		BinTarget:        binTarget,
 	})
 	if err != nil {
