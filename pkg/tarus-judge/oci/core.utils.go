@@ -3,12 +3,15 @@ package oci_judge
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
+	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
 	tarus_io "github.com/Myriad-Dreamin/tarus/pkg/tarus-io"
 	"github.com/containerd/containerd/api/types"
 	v1 "github.com/containerd/containerd/metrics/types/v1"
 	"github.com/containerd/typeurl"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"os"
 	"regexp"
 	"syscall"
@@ -72,11 +75,75 @@ func analysisContainerSignal(code uint32, oup []byte) os.Signal {
 }
 
 type JudgeEnvironment struct {
-	MemoryLimit  int64
-	StackLimit   int64
-	CpuTime      int64
-	CpuHard      int64
-	JudgeChecker tarus_io.JudgeChecker
+	ProcessSpec    specs.Process
+	MemoryLimit    int64
+	StackLimit     int64
+	CpuTime        int64
+	CpuHard        int64
+	ChannelFactory tarus_io.ChannelFactory
+	JudgeIO        tarus_io.Factory
+}
+
+func (c *ContainerdJudgeServiceServer) createProcSpec(
+	_ context.Context, sessionEnv, judgeEnv *JudgeEnvironment, judgePoint *tarus.JudgeTestcase) (err error) {
+	judgeEnv.ProcessSpec = sessionEnv.ProcessSpec
+
+	if len(judgePoint.IoProvider) != 0 {
+		judgeEnv.ChannelFactory, err = c.ioRouter.MakeIOChannel(judgePoint.IoProvider)
+		if err != nil {
+			return err
+		}
+	}
+	if judgeEnv.ChannelFactory == nil {
+		if sessionEnv.ChannelFactory == nil {
+			return errors.New("io provider should be set under either session level or case level")
+		}
+		judgeEnv.ChannelFactory = sessionEnv.ChannelFactory
+	}
+
+	judgeEnv.JudgeIO, err = judgeEnv.ChannelFactory(judgePoint.Input, judgePoint.Answer)
+	if err != nil {
+		return err
+	}
+
+	judgeEnv.CpuHard = getOrDefault(judgePoint.EstimatedCpuhard, sessionEnv.CpuHard)
+	judgeEnv.CpuTime = getOrDefault(judgePoint.EstimatedCputime, sessionEnv.CpuTime)
+	judgeEnv.MemoryLimit = getOrDefault(judgePoint.EstimatedMemory, sessionEnv.MemoryLimit)
+	judgeEnv.StackLimit = getOrDefault(judgePoint.EstimatedStack, sessionEnv.StackLimit)
+
+	// todo: check default rlimit, check rlimit_core
+	var rlimits []specs.POSIXRlimit
+	if len(judgeEnv.ProcessSpec.Rlimits) != 0 {
+		rlimits = judgeEnv.ProcessSpec.Rlimits[:0]
+	}
+	if judgeEnv.CpuTime > 1 || judgeEnv.CpuHard > 1 {
+		if judgeEnv.CpuTime > 1 && judgeEnv.CpuHard > 1 {
+			rlimits = append(rlimits, specs.POSIXRlimit{
+				Type: "RLIMIT_CPU",
+				Soft: uint64(judgeEnv.CpuTime),
+				Hard: uint64(judgeEnv.CpuHard),
+			})
+		} else {
+			return errors.New("both cpu hard and cpu time should be set at the same time")
+		}
+	}
+	if judgeEnv.MemoryLimit > 1 {
+		rlimits = append(rlimits, specs.POSIXRlimit{
+			Type: "RLIMIT_DATA",
+			Soft: uint64(judgeEnv.MemoryLimit),
+			Hard: uint64(judgeEnv.MemoryLimit + (32 * int64(hr_bytes.MB))),
+		})
+	}
+	if judgeEnv.StackLimit > 1 {
+		rlimits = append(rlimits, specs.POSIXRlimit{
+			Type: "RLIMIT_STACK",
+			Soft: uint64(judgeEnv.StackLimit),
+			Hard: uint64(judgeEnv.StackLimit + (32 * int64(hr_bytes.MB))),
+		})
+	}
+	judgeEnv.ProcessSpec.Rlimits = rlimits
+
+	return nil
 }
 
 type JudgeMetric struct {
@@ -159,7 +226,7 @@ func (c *ContainerdJudgeServiceServer) analysisJudgeResult(
 	}
 
 	if queryResult.Status == 0 {
-		queryResult.Status, err = judgeEnv.JudgeChecker.GetJudgeStatus(rawMetric.JudgeReport)
+		queryResult.Status, err = judgeEnv.JudgeIO.GetJudgeStatus(rawMetric.JudgeReport)
 		if err != nil {
 			return err
 		}

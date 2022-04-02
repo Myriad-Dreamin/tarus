@@ -335,84 +335,37 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 		return nil, err
 	}
 
-	// todo: config cgroup
+	var sessionEnv JudgeEnvironment
+
 	s, err := cc.Spec(ctx)
 	if err != nil {
 		return nil, err
 	}
-	procTmpl := *s.Process
-	reqLevelCpuhard := getOrDefault(request.Cpuhard, int64(15*time.Second))
-	reqLevelCputime := getOrDefault(request.Cputime, int64(10*time.Second))
-	reqLevelMemory := getOrDefault(request.Memory, int64(512*hr_bytes.MB))
-	reqLevelStack := getOrDefault(request.Stack, int64(512*hr_bytes.MB))
+	sessionEnv.ProcessSpec = *s.Process
+	sessionEnv.ProcessSpec.Terminal = false
+	sessionEnv.ProcessSpec.Args = []string{session.BinTarget}
+
+	sessionEnv.CpuHard = getOrDefault(request.Cpuhard, int64(15*time.Second))
+	sessionEnv.CpuTime = getOrDefault(request.Cputime, int64(10*time.Second))
+	sessionEnv.MemoryLimit = getOrDefault(request.Memory, int64(512*hr_bytes.MB))
+	sessionEnv.StackLimit = getOrDefault(request.Stack, int64(512*hr_bytes.MB))
+	if len(request.IoProvider) != 0 {
+		sessionEnv.ChannelFactory, err = c.ioRouter.MakeIOChannel(request.IoProvider)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	var resp = new(tarus.MakeJudgeResponse)
-	for i := range request.Testcases {
+	for _, judgePoint := range request.Testcases {
+		var judgeEnv JudgeEnvironment
+		var judgeMetric JudgeMetric
+		if err = c.createProcSpec(ctx, &sessionEnv, &judgeEnv, judgePoint); err != nil {
+			return nil, err
+		}
+
 		err = c.withFreshTask(ctx, cc, func(t containerd.Task) error {
-			var judgeEnv JudgeEnvironment
-			var judgeMetric JudgeMetric
-			// fmt.Printf("linux container create successfully\n")
-
-			var judgePoint = request.Testcases[i]
-			procOpts := procTmpl
-			procOpts.Terminal = false
-			procOpts.Args = []string{session.BinTarget}
-
-			var ioProvider = judgePoint.IoProvider
-			if len(ioProvider) == 0 {
-				ioProvider = request.IoProvider
-			}
-
-			ioc, err := c.ioRouter.MakeIOChannel(ioProvider)
-			if err != nil {
-				return err
-			}
-
-			fac, err := ioc(judgePoint.Input, judgePoint.Answer)
-			if err != nil {
-				return err
-			}
-			judgeEnv.JudgeChecker = fac
-
-			judgeEnv.CpuHard = getOrDefault(judgePoint.EstimatedCpuhard, reqLevelCpuhard)
-			judgeEnv.CpuTime = getOrDefault(judgePoint.EstimatedCputime, reqLevelCputime)
-			judgeEnv.MemoryLimit = getOrDefault(judgePoint.EstimatedMemory, reqLevelMemory)
-			judgeEnv.StackLimit = getOrDefault(judgePoint.EstimatedStack, reqLevelStack)
-
-			// todo: check default rlimit, check rlimit_core
-			if len(procOpts.Rlimits) != 0 {
-				procOpts.Rlimits = procOpts.Rlimits[:0]
-			}
-
-			if judgeEnv.CpuTime > 1 || judgeEnv.CpuHard > 1 {
-				if judgeEnv.CpuTime > 1 && judgeEnv.CpuHard > 1 {
-					procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
-						Type: "RLIMIT_CPU",
-						Soft: uint64(judgeEnv.CpuTime),
-						Hard: uint64(judgeEnv.CpuHard),
-					})
-				} else {
-					return errors.New("both cpu hard and cpu time should be set at the same time")
-				}
-			}
-
-			if judgeEnv.MemoryLimit > 1 {
-				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
-					Type: "RLIMIT_DATA",
-					Soft: uint64(judgeEnv.MemoryLimit),
-					Hard: uint64(judgeEnv.MemoryLimit + (32 * int64(hr_bytes.MB))),
-				})
-			}
-
-			if judgeEnv.StackLimit > 1 {
-				procOpts.Rlimits = append(procOpts.Rlimits, specs.POSIXRlimit{
-					Type: "RLIMIT_STACK",
-					Soft: uint64(judgeEnv.StackLimit),
-					Hard: uint64(judgeEnv.StackLimit + (32 * int64(hr_bytes.MB))),
-				})
-			}
-
-			process, err := t.Exec(ctx, "judge_exec", &procOpts, fac.AsCreator())
+			process, err := t.Exec(ctx, "judge_exec", &judgeEnv.ProcessSpec, judgeEnv.JudgeIO.AsCreator())
 			if err != nil {
 				return err
 			}
@@ -443,30 +396,30 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 				judgeMetric.IsTimeout = true
 			}
 
-			var qr = &tarus.QueryJudgeItem{
-				JudgeKey: judgePoint.JudgeKey,
-			}
-
 			if judgeMetric.Code, judgeMetric.ExitedAt, err = st.Result(); err != nil {
 				return err
 			}
-			if judgeMetric.JudgeReport, err = judgeEnv.JudgeChecker.GetJudgeResult(); err != nil {
+			if judgeMetric.JudgeReport, err = judgeEnv.JudgeIO.GetJudgeResult(); err != nil {
 				return err
 			}
 			if judgeMetric.ContainerInfo, err = t.Metrics(rawCtx); err != nil {
 				return err
 			}
-			if err = c.analysisJudgeResult(ctx, &judgeEnv, qr, &judgeMetric); err != nil {
-				return err
-			}
-
-			resp.Items = append(resp.Items, qr)
-			if err != nil {
-				return err
-			}
 
 			return nil
 		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		var qr = &tarus.QueryJudgeItem{
+			JudgeKey: judgePoint.JudgeKey,
+		}
+		if err = c.analysisJudgeResult(ctx, &judgeEnv, qr, &judgeMetric); err != nil {
+			return nil, err
+		}
+		resp.Items = append(resp.Items, qr)
 		if err != nil {
 			return nil, err
 		}
