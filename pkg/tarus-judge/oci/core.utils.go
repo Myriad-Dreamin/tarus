@@ -13,62 +13,15 @@ import (
 	"github.com/containerd/typeurl"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"os"
-	"regexp"
 	"syscall"
 	"time"
 )
 
-var golangRepMapping = map[string]os.Signal{
-	"SIGABRT":   syscall.SIGABRT,
-	"SIGALRM":   syscall.SIGALRM,
-	"SIGBUS":    syscall.SIGBUS,
-	"SIGCHLD":   syscall.SIGCHLD,
-	"SIGCLD":    syscall.SIGCLD,
-	"SIGCONT":   syscall.SIGCONT,
-	"SIGFPE":    syscall.SIGFPE,
-	"SIGHUP":    syscall.SIGHUP,
-	"SIGILL":    syscall.SIGILL,
-	"SIGINT":    syscall.SIGINT,
-	"SIGIO":     syscall.SIGIO,
-	"SIGIOT":    syscall.SIGIOT,
-	"SIGKILL":   syscall.SIGKILL,
-	"SIGPIPE":   syscall.SIGPIPE,
-	"SIGPOLL":   syscall.SIGPOLL,
-	"SIGPROF":   syscall.SIGPROF,
-	"SIGPWR":    syscall.SIGPWR,
-	"SIGQUIT":   syscall.SIGQUIT,
-	"SIGSEGV":   syscall.SIGSEGV,
-	"SIGSTKFLT": syscall.SIGSTKFLT,
-	"SIGSTOP":   syscall.SIGSTOP,
-	"SIGSYS":    syscall.SIGSYS,
-	"SIGTERM":   syscall.SIGTERM,
-	"SIGTRAP":   syscall.SIGTRAP,
-	"SIGTSTP":   syscall.SIGTSTP,
-	"SIGTTIN":   syscall.SIGTTIN,
-	"SIGTTOU":   syscall.SIGTTOU,
-	"SIGUNUSED": syscall.SIGUNUSED,
-	"SIGURG":    syscall.SIGURG,
-	"SIGUSR1":   syscall.SIGUSR1,
-	"SIGUSR2":   syscall.SIGUSR2,
-	"SIGVTALRM": syscall.SIGVTALRM,
-	"SIGWINCH":  syscall.SIGWINCH,
-	"SIGXCPU":   syscall.SIGXCPU,
-	"SIGXFSZ":   syscall.SIGXFSZ,
-}
-
-func captureProgramRep(oup []byte) os.Signal {
-	golangRepCapture := regexp.MustCompile("SIG(?:ABRT|ALRM|BUS|CHLD|CLD|CONT|FPE|HUP|ILL|INT|IO|IOT|KILL|PIPE|POLL|PROF|PWR|QUIT|SEGV|STKFLT|STOP|SYS|TERM|TRAP|TSTP|TTIN|TTOU|UNUSED|URG|USR1|USR2|VTALRM|WINCH|XCPU|XFSZ)")
-	if trapped := golangRepCapture.Find(oup); len(trapped) != 0 {
-		return golangRepMapping[string(trapped)]
-	}
-	return nil
-}
-
 func analysisContainerSignal(code uint32, oup []byte) os.Signal {
 	if 128 < code && code < 128+0x20 { // unix program
 		return syscall.Signal(code - 128)
-	} else if code == 2 { // golang program
-		return captureProgramRep(oup)
+	} else if code == 2 { // golang program etc.
+		return captureConsoleSignal(oup)
 	}
 
 	return nil
