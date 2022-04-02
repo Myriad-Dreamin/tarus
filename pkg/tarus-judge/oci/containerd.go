@@ -389,24 +389,24 @@ func (c *ContainerdJudgeServiceServer) MakeJudge(rawCtx context.Context, request
 	}
 
 	var resp = new(tarus.MakeJudgeResponse)
-	for _, judgePoint := range request.Testcases {
-		var judgeEnv JudgeEnvironment
-		var judgeMetric JudgeMetric
-		var qr = &tarus.QueryJudgeItem{
-			JudgeKey: judgePoint.JudgeKey,
+	for _, testcase := range request.Testcases {
+		var env JudgeEnvironment
+		var metric JudgeMetric
+		var query = &tarus.QueryJudgeItem{
+			JudgeKey: testcase.JudgeKey,
 		}
 
-		if err = c.createProcSpec(ctx, &sessionEnv, &judgeEnv, judgePoint); err != nil {
+		if err = c.createProcSpec(ctx, &sessionEnv, &env, testcase); err != nil {
 			return nil, err
 		}
-		if err = c.runJudgeTask(ctx, cc, &judgeEnv, &judgeMetric); err != nil {
+		if err = c.runJudgeTask(ctx, cc, &env, &metric); err != nil {
 			return nil, err
 		}
-		if err = c.analysisJudgeResult(ctx, &judgeEnv, qr, &judgeMetric); err != nil {
+		if err = c.analysisJudgeResult(ctx, &env, query, &metric); err != nil {
 			return nil, err
 		}
 
-		resp.Items = append(resp.Items, qr)
+		resp.Items = append(resp.Items, query)
 	}
 
 	return resp, nil
