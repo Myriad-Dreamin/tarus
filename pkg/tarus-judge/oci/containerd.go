@@ -228,7 +228,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 
 	// generate config used by worker
 	ctrId := <-c.ccLimiter
-	fixedContainerId := fmt.Sprintf("tarus-engine-snapshot%d", ctrId)
+	fixedContainerId := fmt.Sprintf("tarus-engine%d", ctrId)
 	fixedContainerSnapshotId := fmt.Sprintf("tarus-engine-snapshot%d", ctrId)
 	fixedWorkDir := strings.ReplaceAll(c.options.JudgeWorkdir, "{cid}", strconv.Itoa(ctrId))
 
