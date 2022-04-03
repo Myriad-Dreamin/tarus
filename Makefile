@@ -6,4 +6,4 @@ run-server:
 	go run ./cmd/tarus
 
 
-.PHONY: generate
+.PHONY: generate run-server
