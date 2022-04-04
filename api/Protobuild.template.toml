@@ -18,12 +18,15 @@ before = [
 [packages]
 
 [[overrides]]
-prefixes = ["github.com/Myriad-Dreamin/tarus/api/judge"]
+prefixes = ["github.com/Myriad-Dreamin/tarus/api/tarus"]
 
 # This takes inspiration from Go's API checker in
 # https://github.com/golang/go/tree/master/api, but does so for protobufs.
 # Stablize packages and collections of packages of generated protobufs.
 [[descriptors]]
-
-prefix = "github.com/Myriad-Dreamin/tarus/api"
+prefix = "((REL_PWD))"
 target = "next.pb.txt"
+ignore_files = [
+  "google/protobuf/descriptor.proto",
+  "gogoproto/gogo.proto"
+]

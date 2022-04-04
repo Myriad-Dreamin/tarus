@@ -1,0 +1,767 @@
+file {
+  name: "google/protobuf/timestamp.proto"
+  package: "google.protobuf"
+  message_type {
+    name: "Timestamp"
+    field {
+      name: "seconds"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "seconds"
+    }
+    field {
+      name: "nanos"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "nanos"
+    }
+  }
+  options {
+    java_package: "com.google.protobuf"
+    java_outer_classname: "TimestampProto"
+    java_multiple_files: true
+    go_package: "google.golang.org/protobuf/types/known/timestamppb"
+    cc_enable_arenas: true
+    objc_class_prefix: "GPB"
+    csharp_namespace: "Google.Protobuf.WellKnownTypes"
+  }
+  syntax: "proto3"
+}
+file {
+  name: "api/tarus/judge.oci.proto"
+  package: "tarus.api.judge.oci"
+  dependency: "google/protobuf/timestamp.proto"
+  message_type {
+    name: "OCIJudgeSession"
+    field {
+      name: "created_at"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".google.protobuf.Timestamp"
+      json_name: "createdAt"
+    }
+    field {
+      name: "updated_at"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".google.protobuf.Timestamp"
+      json_name: "updatedAt"
+    }
+    field {
+      name: "commit_status"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "commitStatus"
+    }
+    field {
+      name: "worker_id"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "workerId"
+    }
+    field {
+      name: "container_id"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "containerId"
+    }
+    field {
+      name: "bin_target"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "binTarget"
+    }
+    field {
+      name: "host_workdir"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "hostWorkdir"
+    }
+  }
+  options {
+    go_package: "tarus/;tarus"
+  }
+  syntax: "proto3"
+}
+file {
+  name: "google/protobuf/empty.proto"
+  package: "google.protobuf"
+  message_type {
+    name: "Empty"
+  }
+  options {
+    java_package: "com.google.protobuf"
+    java_outer_classname: "EmptyProto"
+    java_multiple_files: true
+    go_package: "google.golang.org/protobuf/types/known/emptypb"
+    cc_enable_arenas: true
+    objc_class_prefix: "GPB"
+    csharp_namespace: "Google.Protobuf.WellKnownTypes"
+  }
+  syntax: "proto3"
+}
+file {
+  name: "api/tarus/judge.proto"
+  package: "tarus.api.judge"
+  dependency: "google/protobuf/empty.proto"
+  message_type {
+    name: "HandshakeRequest"
+    field {
+      name: "api_version"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "apiVersion"
+    }
+    field {
+      name: "web_hook_url"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "webHookUrl"
+    }
+  }
+  message_type {
+    name: "HandshakeResponse"
+    field {
+      name: "api_version"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "apiVersion"
+    }
+    field {
+      name: "judge_status_hash"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "judgeStatusHash"
+    }
+    field {
+      name: "implemented_apis"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "implementedApis"
+    }
+  }
+  message_type {
+    name: "CreateContainerRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "image_id"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "imageId"
+    }
+    field {
+      name: "bin_target"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "binTarget"
+    }
+    field {
+      name: "estimated_cputime"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedCputime"
+    }
+    field {
+      name: "estimated_cpuhard"
+      number: 103
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedCpuhard"
+    }
+    field {
+      name: "estimated_memory"
+      number: 104
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedMemory"
+    }
+    field {
+      name: "estimated_stack"
+      number: 105
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedStack"
+    }
+  }
+  message_type {
+    name: "BundleContainerRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+  }
+  message_type {
+    name: "RemoveContainerRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+  }
+  message_type {
+    name: "CloneContainerRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "from_task_key"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "fromTaskKey"
+    }
+    field {
+      name: "from_container_id"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "fromContainerId"
+    }
+  }
+  message_type {
+    name: "CheckContainerRequest"
+    field {
+      name: "plugin"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "plugin"
+    }
+    field {
+      name: "task_key"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "container_id"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "containerId"
+    }
+    field {
+      name: "extras"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "extras"
+    }
+  }
+  message_type {
+    name: "CopyFileRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "from_url"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "fromUrl"
+    }
+    field {
+      name: "to_path"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "toPath"
+    }
+    field {
+      name: "override_file"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "overrideFile"
+    }
+  }
+  message_type {
+    name: "CompileProgramRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "from_url"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "fromUrl"
+    }
+    field {
+      name: "to_path"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "toPath"
+    }
+    field {
+      name: "compile_target"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "compileTarget"
+    }
+    field {
+      name: "compile_features"
+      number: 102
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "compileFeatures"
+    }
+    field {
+      name: "override_file"
+      number: 103
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "overrideFile"
+    }
+  }
+  message_type {
+    name: "JudgeTestcase"
+    field {
+      name: "judge_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "judgeKey"
+    }
+    field {
+      name: "io_provider"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "ioProvider"
+    }
+    field {
+      name: "input"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "input"
+    }
+    field {
+      name: "answer"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "answer"
+    }
+    field {
+      name: "estimated_cputime"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedCputime"
+    }
+    field {
+      name: "estimated_cpuhard"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedCpuhard"
+    }
+    field {
+      name: "estimated_memory"
+      number: 103
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedMemory"
+    }
+    field {
+      name: "estimated_stack"
+      number: 104
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "estimatedStack"
+    }
+  }
+  message_type {
+    name: "MakeJudgeRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "io_provider"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "ioProvider"
+    }
+    field {
+      name: "testcases"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tarus.api.judge.JudgeTestcase"
+      json_name: "testcases"
+    }
+    field {
+      name: "is_async"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "isAsync"
+    }
+    field {
+      name: "cputime"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "cputime"
+    }
+    field {
+      name: "cpuhard"
+      number: 103
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "cpuhard"
+    }
+    field {
+      name: "memory"
+      number: 104
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "memory"
+    }
+    field {
+      name: "stack"
+      number: 105
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "stack"
+    }
+  }
+  message_type {
+    name: "MakeJudgeResponse"
+    field {
+      name: "items"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tarus.api.judge.QueryJudgeItem"
+      json_name: "items"
+    }
+    field {
+      name: "waiting"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "waiting"
+    }
+    field {
+      name: "qos_wait"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "qosWait"
+    }
+  }
+  message_type {
+    name: "QueryJudgeRequest"
+    field {
+      name: "task_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "taskKey"
+    }
+    field {
+      name: "judge_key"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "judgeKey"
+    }
+  }
+  message_type {
+    name: "QueryJudgeItem"
+    field {
+      name: "judge_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "judgeKey"
+    }
+    field {
+      name: "time_use"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "timeUse"
+    }
+    field {
+      name: "memory_use"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "memoryUse"
+    }
+    field {
+      name: "status"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".tarus.api.judge.JudgeStatus"
+      json_name: "status"
+    }
+    field {
+      name: "hint"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "hint"
+    }
+    field {
+      name: "time_use_hard"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "timeUseHard"
+    }
+  }
+  message_type {
+    name: "QueryJudgeResponse"
+    field {
+      name: "items"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tarus.api.judge.QueryJudgeItem"
+      json_name: "items"
+    }
+  }
+  enum_type {
+    name: "JudgeStatus"
+    value {
+      name: "Unknown"
+      number: 0
+    }
+    value {
+      name: "Accepted"
+      number: 1
+    }
+    value {
+      name: "WrongAnswer"
+      number: 2
+    }
+    value {
+      name: "PresentationError"
+      number: 3
+    }
+    value {
+      name: "RuntimeError"
+      number: 4
+    }
+    value {
+      name: "MemoryLimitExceed"
+      number: 5
+    }
+    value {
+      name: "TimeLimitExceed"
+      number: 6
+    }
+    value {
+      name: "OutputLimitExceed"
+      number: 7
+    }
+    value {
+      name: "PartialResult"
+      number: 8
+    }
+    value {
+      name: "CompilationError"
+      number: 9
+    }
+    value {
+      name: "Running"
+      number: 10
+    }
+    value {
+      name: "SystemError"
+      number: 101
+    }
+    value {
+      name: "SecurityPolicyViolation"
+      number: 102
+    }
+    value {
+      name: "JudgeCheckerException"
+      number: 103
+    }
+    value {
+      name: "AssertionFailed"
+      number: 104
+    }
+    value {
+      name: "FloatingPointException"
+      number: 105
+    }
+  }
+  service {
+    name: "JudgeService"
+    method {
+      name: "Handshake"
+      input_type: ".tarus.api.judge.HandshakeRequest"
+      output_type: ".tarus.api.judge.HandshakeResponse"
+    }
+    method {
+      name: "CreateContainer"
+      input_type: ".tarus.api.judge.CreateContainerRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "BundleContainer"
+      input_type: ".tarus.api.judge.BundleContainerRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "RemoveContainer"
+      input_type: ".tarus.api.judge.RemoveContainerRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "CloneContainer"
+      input_type: ".tarus.api.judge.CloneContainerRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "CheckContainer"
+      input_type: ".tarus.api.judge.CheckContainerRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "CopyFile"
+      input_type: ".tarus.api.judge.CopyFileRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "CompileProgram"
+      input_type: ".tarus.api.judge.CompileProgramRequest"
+      output_type: ".google.protobuf.Empty"
+    }
+    method {
+      name: "MakeJudge"
+      input_type: ".tarus.api.judge.MakeJudgeRequest"
+      output_type: ".tarus.api.judge.MakeJudgeResponse"
+    }
+    method {
+      name: "QueryJudge"
+      input_type: ".tarus.api.judge.QueryJudgeRequest"
+      output_type: ".tarus.api.judge.QueryJudgeResponse"
+    }
+  }
+  options {
+    go_package: "tarus/;tarus"
+  }
+  syntax: "proto3"
+}
+file {
+  name: "api/tarus/reporter.proto"
+  package: "tarus.api.reporter"
+  message_type {
+    name: "CallbackJudgeItem"
+    field {
+      name: "judge_key"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "judgeKey"
+    }
+    field {
+      name: "time_use"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "timeUse"
+    }
+    field {
+      name: "memory_use"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "memoryUse"
+    }
+    field {
+      name: "judge_result"
+      number: 103
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      json_name: "judgeResult"
+    }
+    field {
+      name: "hint"
+      number: 104
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "hint"
+    }
+  }
+  message_type {
+    name: "CallbackJudgeResponse"
+    field {
+      name: "items"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tarus.api.reporter.CallbackJudgeItem"
+      json_name: "items"
+    }
+  }
+  service {
+    name: "JudgeResultReporter"
+    method {
+      name: "CallbackJudge"
+      input_type: ".tarus.api.reporter.CallbackJudgeItem"
+      output_type: ".tarus.api.reporter.CallbackJudgeResponse"
+    }
+  }
+  options {
+    go_package: "tarus/;tarus"
+  }
+  syntax: "proto3"
+}
