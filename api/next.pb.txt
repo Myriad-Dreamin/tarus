@@ -358,6 +358,23 @@ file {
     }
   }
   message_type {
+    name: "CompileProgramResponse"
+    field {
+      name: "diag"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "diag"
+    }
+    field {
+      name: "code"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "code"
+    }
+  }
+  message_type {
     name: "JudgeTestcase"
     field {
       name: "judge_key"
@@ -682,7 +699,7 @@ file {
     method {
       name: "CompileProgram"
       input_type: ".tarus.api.judge.CompileProgramRequest"
-      output_type: ".google.protobuf.Empty"
+      output_type: ".tarus.api.judge.CompileProgramResponse"
     }
     method {
       name: "MakeJudge"

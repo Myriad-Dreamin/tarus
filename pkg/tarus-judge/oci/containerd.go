@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Myriad-Dreamin/tarus/api/tarus"
 	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
+	tarus_compiler "github.com/Myriad-Dreamin/tarus/pkg/tarus-compiler"
 	tarus_io "github.com/Myriad-Dreamin/tarus/pkg/tarus-io"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	tarus_store "github.com/Myriad-Dreamin/tarus/pkg/tarus-store"
@@ -20,6 +21,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
+	"mime"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -42,6 +44,7 @@ type ContainerdJudgeServiceServer struct {
 	sessionStore tarus_store.JudgeSessionStore
 	closers      []io.Closer
 	ioRouter     tarus_io.Router
+	compiler     tarus_compiler.Compiler
 
 	options   ContainerdJudgeConfig
 	ccLimiter chan int
@@ -75,6 +78,20 @@ func WithContainerdJudgeWorkdir(wd string) ContainerdJudgeOption {
 	}
 }
 
+func WithCheckerPlugin(plugin tarus_io.Router) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.ioRouter = plugin
+		return nil
+	}
+}
+
+func WithCompilerPlugin(plugin tarus_compiler.Compiler) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.compiler = plugin
+		return nil
+	}
+}
+
 func defaultContainerdJudgeConfig() ContainerdJudgeConfig {
 	return ContainerdJudgeConfig{
 		Address:        "/run/containerd/containerd.sock",
@@ -87,6 +104,7 @@ func defaultContainerdJudgeConfig() ContainerdJudgeConfig {
 func NewContainerdServer(options ...ContainerdJudgeOption) (svc *ContainerdJudgeServiceServer, err error) {
 	svc = &ContainerdJudgeServiceServer{
 		ioRouter: tarus_io.Statics,
+		compiler: tarus_compiler.Statics,
 		options:  defaultContainerdJudgeConfig(),
 	}
 
@@ -156,6 +174,25 @@ func (c *ContainerdJudgeServiceServer) Handshake(_ context.Context, request *tar
 	}, nil
 }
 
+func (c *ContainerdJudgeServiceServer) getHostPathForFile(session *tarus.OCIJudgeSession, p string) (string, error) {
+	targetPath, err := filepath.Rel("/workdir", p)
+	if err != nil {
+		return "", err
+	}
+	if strings.HasPrefix(targetPath, "..") {
+		return "", status.Errorf(codes.InvalidArgument, "to path not startswith /workdir")
+	}
+
+	workdir := filepath.Clean(session.HostWorkdir)
+	targetPath = filepath.Join(workdir, targetPath)
+
+	if !strings.HasPrefix(targetPath, workdir) {
+		return "", status.Errorf(codes.InvalidArgument, "to path escape host work directory")
+	}
+
+	return targetPath, nil
+}
+
 func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *tarus.CopyFileRequest) (*emptypb.Empty, error) {
 	ctx = namespaces.WithNamespace(ctx, "tarus")
 
@@ -164,15 +201,10 @@ func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *ta
 		return nil, err
 	}
 
-	targetPath, err := filepath.Rel("/workdir", request.ToPath)
+	targetPath, err := c.getHostPathForFile(session, request.ToPath)
 	if err != nil {
 		return nil, err
 	}
-	if strings.HasPrefix(targetPath, "..") {
-		return nil, status.Errorf(codes.InvalidArgument, "to path not startswith /workdir")
-	}
-
-	targetPath = filepath.Join(session.HostWorkdir, targetPath)
 
 	if _, err := os.Stat(targetPath); err == nil {
 		if !request.OverrideFile {
@@ -206,8 +238,52 @@ func (c *ContainerdJudgeServiceServer) CopyFile(ctx context.Context, request *ta
 	return new(emptypb.Empty), nil
 }
 
-func (c *ContainerdJudgeServiceServer) CompileProgram(ctx context.Context, request *tarus.CompileProgramRequest) (*emptypb.Empty, error) {
-	return c.UnimplementedJudgeServiceServer.CompileProgram(ctx, request)
+func (c *ContainerdJudgeServiceServer) CompileProgram(ctx context.Context, request *tarus.CompileProgramRequest) (*tarus.CompileProgramResponse, error) {
+	ctx = namespaces.WithNamespace(ctx, "tarus")
+
+	session, err := c.sessionStore.GetJudgeSession(ctx, request.TaskKey)
+	if err != nil {
+		return nil, err
+	}
+
+	targetPath, err := c.getHostPathForFile(session, request.ToPath)
+	if err != nil {
+		return nil, err
+	}
+
+	ct, extras, err := mime.ParseMediaType(request.CompileTarget)
+	if err != nil {
+		return nil, err
+	}
+
+	var intraCompileTarget int = tarus_compiler.CompileTargetUnknown
+	if ct == "language/auto" {
+		intraCompileTarget = tarus_compiler.ExtToCompileTarget(filepath.Ext(request.FromUrl))
+	} else {
+		intraCompileTarget = tarus_compiler.MimeToCompileTarget(ct)
+	}
+
+	if intraCompileTarget == tarus_compiler.CompileTargetUnknown {
+		return nil, status.Errorf(codes.InvalidArgument, "unknown language mime in compile target: %s", ct)
+	}
+
+	cr, err := c.compiler.Compile(&tarus_compiler.CompilerArgs{
+		CompileTarget: intraCompileTarget,
+		CompiledRole:  "user",
+		ExtraArgs:     extras,
+		Args: []string{
+			"@input", request.FromUrl,
+			"@output", targetPath,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &tarus.CompileProgramResponse{
+		Code: int32(cr.ExitSummary),
+		Diag: cr.DiagPage,
+	}, nil
 }
 
 func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, request *tarus.CreateContainerRequest) (_ *emptypb.Empty, err error) {

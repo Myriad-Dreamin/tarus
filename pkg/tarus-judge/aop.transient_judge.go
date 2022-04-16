@@ -54,10 +54,11 @@ func TransientJudge(c tarus.JudgeServiceServer, rawCtx context.Context, rawReq *
 
 		if len(binTarget) == 0 {
 			r, err := c.CompileProgram(rawCtx, &tarus.CompileProgramRequest{
-				TaskKey:      req.TaskKey,
-				FromUrl:      req.CompileFile,
-				ToPath:       req.BinTarget,
-				OverrideFile: true,
+				TaskKey:       req.TaskKey,
+				CompileTarget: "language/auto",
+				FromUrl:       req.CompileFile,
+				ToPath:        req.BinTarget,
+				OverrideFile:  true,
 			})
 			if err != nil {
 				return err

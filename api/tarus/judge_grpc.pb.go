@@ -37,7 +37,7 @@ type JudgeServiceClient interface {
 	// copy binary is dangerous, but one can use this api to upload program.
 	CopyFile(ctx context.Context, in *CopyFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// compile by the judge service with security checking
-	CompileProgram(ctx context.Context, in *CompileProgramRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CompileProgram(ctx context.Context, in *CompileProgramRequest, opts ...grpc.CallOption) (*CompileProgramResponse, error)
 	// Judge Program (Run it).
 	// Judge multiple times.
 	// The judge service MUST accept all judge requests, and indicates the congestion by `MakeJudgeResponse.waiting`.
@@ -120,8 +120,8 @@ func (c *judgeServiceClient) CopyFile(ctx context.Context, in *CopyFileRequest, 
 	return out, nil
 }
 
-func (c *judgeServiceClient) CompileProgram(ctx context.Context, in *CompileProgramRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *judgeServiceClient) CompileProgram(ctx context.Context, in *CompileProgramRequest, opts ...grpc.CallOption) (*CompileProgramResponse, error) {
+	out := new(CompileProgramResponse)
 	err := c.cc.Invoke(ctx, "/tarus.api.judge.JudgeService/CompileProgram", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ type JudgeServiceServer interface {
 	// copy binary is dangerous, but one can use this api to upload program.
 	CopyFile(context.Context, *CopyFileRequest) (*emptypb.Empty, error)
 	// compile by the judge service with security checking
-	CompileProgram(context.Context, *CompileProgramRequest) (*emptypb.Empty, error)
+	CompileProgram(context.Context, *CompileProgramRequest) (*CompileProgramResponse, error)
 	// Judge Program (Run it).
 	// Judge multiple times.
 	// The judge service MUST accept all judge requests, and indicates the congestion by `MakeJudgeResponse.waiting`.
@@ -207,7 +207,7 @@ func (UnimplementedJudgeServiceServer) CheckContainer(context.Context, *CheckCon
 func (UnimplementedJudgeServiceServer) CopyFile(context.Context, *CopyFileRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CopyFile not implemented")
 }
-func (UnimplementedJudgeServiceServer) CompileProgram(context.Context, *CompileProgramRequest) (*emptypb.Empty, error) {
+func (UnimplementedJudgeServiceServer) CompileProgram(context.Context, *CompileProgramRequest) (*CompileProgramResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CompileProgram not implemented")
 }
 func (UnimplementedJudgeServiceServer) MakeJudge(context.Context, *MakeJudgeRequest) (*MakeJudgeResponse, error) {

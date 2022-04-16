@@ -34,6 +34,25 @@ func echoTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Contex
 	}
 }
 
+func compileEchoTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
+	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
+		ImageId:     "docker.io/library/ubuntu:20.04",
+		CompileFile: "cmd/tests/containerd-judge/programs/echo_test.cc",
+		MakeJudgeRequest: &tarus.MakeJudgeRequest{
+			Testcases: []*tarus.JudgeTestcase{
+				{
+					JudgeKey:   []byte("001"),
+					IoProvider: "memory",
+					Input:      hexUrl(``),
+					Answer:     hexUrl(`hello world`),
+				},
+			},
+		},
+	}); err != nil {
+		panic(err)
+	}
+}
+
 func sleepTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Context) {
 	if _, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
@@ -223,4 +242,5 @@ func main() {
 	// ioTest(client, ctx)
 	// inputTest(client, ctx)
 	// statusTest(client, ctx)
+	// compileEchoTest(client, ctx)
 }

@@ -43,7 +43,7 @@ func (c *ClientAdaptor) CopyFile(ctx context.Context, request *tarus.CopyFileReq
 	return c.c.CopyFile(ctx, request)
 }
 
-func (c *ClientAdaptor) CompileProgram(ctx context.Context, request *tarus.CompileProgramRequest) (*emptypb.Empty, error) {
+func (c *ClientAdaptor) CompileProgram(ctx context.Context, request *tarus.CompileProgramRequest) (*tarus.CompileProgramResponse, error) {
 	return c.c.CompileProgram(ctx, request)
 }
 

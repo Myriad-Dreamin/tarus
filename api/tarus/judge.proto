@@ -73,6 +73,11 @@ message CompileProgramRequest {
   bool override_file = 103;
 }
 
+message CompileProgramResponse {
+  string diag = 1;
+  int32 code = 2;
+}
+
 message JudgeTestcase {
   bytes judge_key = 1;
   // control behavior of the stdin and stdout of problem solver's process
@@ -210,7 +215,7 @@ service JudgeService {
   // copy binary is dangerous, but one can use this api to upload program.
   rpc CopyFile(CopyFileRequest) returns (google.protobuf.Empty);
   // compile by the judge service with security checking
-  rpc CompileProgram(CompileProgramRequest) returns (google.protobuf.Empty);
+  rpc CompileProgram(CompileProgramRequest) returns (CompileProgramResponse);
 
   // Judge Program (Run it).
   // Judge multiple times.
