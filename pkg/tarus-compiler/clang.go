@@ -41,7 +41,18 @@ type clangCompiler struct {
 }
 
 func (g *clangCompiler) Compile(args *CompilerArgs) (cr CompilerResponse, err error) {
-	var cmdArgs []string
+	var cmdArgs = []string{"-x", ""}
+	switch args.CompileTarget {
+	case CompileTargetLanguageC:
+		cmdArgs[1] = "c"
+	case CompileTargetLanguageCpp:
+		cmdArgs[1] = "c++"
+	case CompileTargetDefault:
+		cmdArgs = cmdArgs[:0]
+	default:
+		return CompilerResponse{}, fmt.Errorf("invalid compiler target: %v", args.CompileTarget)
+	}
+
 	for i := 0; i < len(args.Args); i++ {
 		if strings.HasPrefix(args.Args[i], "@") {
 			if i+1 == len(args.Args) {
@@ -67,7 +78,12 @@ func (g *clangCompiler) Compile(args *CompilerArgs) (cr CompilerResponse, err er
 		}
 	}
 
-	err = consumeCmd(exec.Command(g.Clang, cmdArgs...))
+	s, err := errorOutput(g.Clang, cmdArgs...)
+	if er, ok := err.(*exec.ExitError); ok {
+		cr.ExitSummary = er.ExitCode()
+		cr.DiagPage = s
+		err = nil
+	}
 	return
 }
 
