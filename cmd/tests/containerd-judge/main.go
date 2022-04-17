@@ -8,7 +8,6 @@ import (
 	hr_bytes "github.com/Myriad-Dreamin/tarus/pkg/hr-bytes"
 	tarus_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge"
 	oci_judge "github.com/Myriad-Dreamin/tarus/pkg/tarus-judge/oci"
-	"syscall"
 )
 
 func hexUrl(s string) string {
@@ -191,20 +190,20 @@ func statusTest(client *oci_judge.ContainerdJudgeServiceServer, ctx context.Cont
 		},
 	}
 
-	for i := 1; i < 0x20; i++ {
-		testcases = append(testcases, &tarus.JudgeTestcase{
-			JudgeKey:   []byte(fmt.Sprintf("signal:%v", syscall.Signal(i).String())),
-			IoProvider: "memory",
-			Input:      hexUrl(fmt.Sprintf("signal=%v\n", i)),
-			Answer:     hexUrl(``),
-		})
-		testcases = append(testcases, &tarus.JudgeTestcase{
-			JudgeKey:   []byte(fmt.Sprintf("signal:%v (exit code detection)", syscall.Signal(i).String())),
-			IoProvider: "memory",
-			Input:      hexUrl(fmt.Sprintf("exit=%v\n", i+128)),
-			Answer:     hexUrl(``),
-		})
-	}
+	//for i := 1; i < 0x20; i++ {
+	//	testcases = append(testcases, &tarus.JudgeTestcase{
+	//		JudgeKey:   []byte(fmt.Sprintf("signal:%v", syscall.Signal(i).String())),
+	//		IoProvider: "memory",
+	//		Input:      hexUrl(fmt.Sprintf("signal=%v\n", i)),
+	//		Answer:     hexUrl(``),
+	//	})
+	//	testcases = append(testcases, &tarus.JudgeTestcase{
+	//		JudgeKey:   []byte(fmt.Sprintf("signal:%v (exit code detection)", syscall.Signal(i).String())),
+	//		IoProvider: "memory",
+	//		Input:      hexUrl(fmt.Sprintf("exit=%v\n", i+128)),
+	//		Answer:     hexUrl(``),
+	//	})
+	//}
 
 	statusCodes, err := tarus_judge.TransientJudge(client, ctx, &tarus_judge.TransientJudgeRequest{
 		ImageId:   "docker.io/library/ubuntu:20.04",
@@ -232,15 +231,15 @@ func main() {
 
 	ctx := context.Background()
 
-	if err = client.ImportOCIArchive(ctx, "ubuntu.tar"); err != nil {
-		panic(err)
-	}
+	//if err = client.ImportOCIArchive(ctx, "ubuntu.tar"); err != nil {
+	//	panic(err)
+	//}
 
 	// echoTest(client, ctx)
 	// sleepTest(client, ctx)
 	// sleepHardTest(client, ctx)
 	// ioTest(client, ctx)
 	// inputTest(client, ctx)
-	// statusTest(client, ctx)
-	// compileEchoTest(client, ctx)
+	statusTest(client, ctx)
+	compileEchoTest(client, ctx)
 }

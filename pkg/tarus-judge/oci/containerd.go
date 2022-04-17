@@ -32,10 +32,11 @@ import (
 type ContainerdJudgeOption func(svc *ContainerdJudgeServiceServer) error
 
 type ContainerdJudgeConfig struct {
-	Address        string `json:"address"`
-	JudgeCachePath string `json:"judge_cache_path"`
-	Concurrency    int    `json:"concurrency"`
-	JudgeWorkdir   string `json:"judge_workdir"`
+	Address            string              `json:"address"`
+	JudgeCachePath     string              `json:"judge_cache_path"`
+	Concurrency        int                 `json:"concurrency"`
+	JudgeWorkdir       string              `json:"judge_workdir"`
+	JudgeSeccompOption *specs.LinuxSeccomp `json:"judge_seccomp_option"`
 }
 
 type ContainerdJudgeServiceServer struct {
@@ -53,6 +54,13 @@ type ContainerdJudgeServiceServer struct {
 func WithContainerdAddress(address string) ContainerdJudgeOption {
 	return func(svc *ContainerdJudgeServiceServer) error {
 		svc.options.Address = address
+		return nil
+	}
+}
+
+func WithContainerdJudgeSeccomp(sc *specs.LinuxSeccomp) ContainerdJudgeOption {
+	return func(svc *ContainerdJudgeServiceServer) error {
+		svc.options.JudgeSeccompOption = sc
 		return nil
 	}
 }
@@ -116,6 +124,9 @@ func NewContainerdServer(options ...ContainerdJudgeOption) (svc *ContainerdJudge
 
 	if svc.options.Concurrency <= 0 {
 		return nil, fmt.Errorf("invalid conccurency option, should be greater than zero: %d", svc.options.Concurrency)
+	}
+	if svc.options.JudgeSeccompOption == nil {
+		svc.options.JudgeSeccompOption = judgeSeccomp
 	}
 	svc.ccLimiter = make(chan int, svc.options.Concurrency)
 	for i := 0; i < svc.options.Concurrency; i++ {
@@ -336,6 +347,7 @@ func (c *ContainerdJudgeServiceServer) CreateContainer(ctx context.Context, requ
 			oci.WithImageConfig(image),
 			oci.WithMounts(mounts),
 			oci.WithProcessCwd("/workdir"),
+			withSeccomp(c.options.JudgeSeccompOption),
 		),
 		// containerd.WithRuntime("/home/kamiyoru/work/go/tarus/cmd/runsc/wrapper.template.sh", nil),
 	)

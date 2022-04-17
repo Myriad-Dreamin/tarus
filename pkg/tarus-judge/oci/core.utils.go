@@ -76,6 +76,19 @@ func (c *ContainerdJudgeServiceServer) createProcSpec(
 	if len(judgeEnv.ProcessSpec.Rlimits) != 0 {
 		rlimits = judgeEnv.ProcessSpec.Rlimits[:0]
 	}
+	rlimits = append(rlimits, specs.POSIXRlimit{
+		Type: "RLIMIT_NPROC",
+		Soft: uint64(16),
+		Hard: uint64(16),
+	}, specs.POSIXRlimit{
+		Type: "RLIMIT_CORE",
+		Soft: uint64(0),
+		Hard: uint64(0),
+	}, specs.POSIXRlimit{
+		Type: "RLIMIT_NOFILE",
+		Soft: uint64(64),
+		Hard: uint64(64),
+	})
 	if judgeEnv.CpuTime > 1 || judgeEnv.CpuHard > 1 {
 		if judgeEnv.CpuTime > 1 && judgeEnv.CpuHard > 1 {
 			rlimits = append(rlimits, specs.POSIXRlimit{
