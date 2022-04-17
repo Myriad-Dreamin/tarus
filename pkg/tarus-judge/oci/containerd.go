@@ -78,14 +78,14 @@ func WithContainerdJudgeWorkdir(wd string) ContainerdJudgeOption {
 	}
 }
 
-func WithCheckerPlugin(plugin tarus_io.Router) ContainerdJudgeOption {
+func WithContainerdCheckerPlugin(plugin tarus_io.Router) ContainerdJudgeOption {
 	return func(svc *ContainerdJudgeServiceServer) error {
 		svc.ioRouter = plugin
 		return nil
 	}
 }
 
-func WithCompilerPlugin(plugin tarus_compiler.Compiler) ContainerdJudgeOption {
+func WithContainerdCompilerPlugin(plugin tarus_compiler.Compiler) ContainerdJudgeOption {
 	return func(svc *ContainerdJudgeServiceServer) error {
 		svc.compiler = plugin
 		return nil
