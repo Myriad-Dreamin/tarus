@@ -182,3 +182,56 @@ func MimeToCompileTarget(s string) int {
 	}
 	return CompileTargetUnknown
 }
+
+func CompileTargetToMime(c int) string {
+	switch c {
+	case CompileTargetLanguageC:
+		return "language/c"
+	case CompileTargetLanguageDelphi:
+		return "language/delphi"
+	case CompileTargetLanguageJava:
+		return "language/java"
+	case CompileTargetLanguagePython:
+		return "language/python"
+	case CompileTargetLanguagePython2:
+		return "language/python2"
+	case CompileTargetLanguagePython3:
+		return "language/python3"
+	case CompileTargetLanguagePerl:
+		return "language/perl"
+	case CompileTargetLanguagePhp:
+		return "language/php"
+	case CompileTargetLanguageCpp:
+		return "language/cpp"
+	case CompileTargetLanguageCSharp:
+		return "language/csharp"
+	case CompileTargetLanguageFSharp:
+		return "language/fsharp"
+	case CompileTargetLanguageGolang:
+		return "language/golang"
+	case CompileTargetLanguageJavascript:
+		return "language/javascript"
+	case CompileTargetLanguageNodeJs:
+		return "language/nodejs"
+	case CompileTargetLanguageHaskell:
+		return "language/haskell"
+	case CompileTargetLanguageKotlin:
+		return "language/kotlin"
+	case CompileTargetLanguageOCaml:
+		return "language/ocaml"
+	case CompileTargetLanguagePascal:
+		return "language/pascal"
+	case CompileTargetLanguageRuby:
+		return "language/ruby"
+	case CompileTargetLanguageRust:
+		return "language/rust"
+	case CompileTargetLanguageSwift:
+		return "language/swift"
+	case CompileTargetLanguageScala:
+		return "language/scala"
+	case CompileTargetLanguageTypescript:
+		return "language/typescript"
+	default:
+		return ""
+	}
+}

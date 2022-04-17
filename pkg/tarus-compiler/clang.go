@@ -50,7 +50,7 @@ func (g *clangCompiler) Compile(args *CompilerArgs) (cr CompilerResponse, err er
 	case CompileTargetDefault:
 		cmdArgs = cmdArgs[:0]
 	default:
-		return CompilerResponse{}, fmt.Errorf("invalid compiler target: %v", args.CompileTarget)
+		return CompilerResponse{}, fmt.Errorf("invalid compiler target: %d(%s)", args.CompileTarget, CompileTargetToMime(args.CompileTarget))
 	}
 
 	for i := 0; i < len(args.Args); i++ {
