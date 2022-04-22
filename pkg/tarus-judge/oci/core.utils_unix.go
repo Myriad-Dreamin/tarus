@@ -114,6 +114,7 @@ func init() {
 					strings.HasPrefix(names[i], "io_") ||
 					strings.HasPrefix(names[i], "landlock_") ||
 					/* seccomp operation */
+					strings.Contains(names[i], "prctl") ||
 					strings.Contains(names[i], "seccomp") {
 					continue
 				}
