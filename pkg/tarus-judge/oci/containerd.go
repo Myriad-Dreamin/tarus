@@ -58,9 +58,9 @@ func WithContainerdAddress(address string) ContainerdJudgeOption {
 	}
 }
 
-func WithContainerdJudgeSeccomp(sc *specs.LinuxSeccomp) ContainerdJudgeOption {
+func WithContainerdConcurrencyNum(cc int) ContainerdJudgeOption {
 	return func(svc *ContainerdJudgeServiceServer) error {
-		svc.options.JudgeSeccompOption = sc
+		svc.options.Concurrency = cc
 		return nil
 	}
 }
@@ -72,16 +72,16 @@ func WithContainerdJudgeCachePath(path string) ContainerdJudgeOption {
 	}
 }
 
-func WithContainerdConcurrencyNum(cc int) ContainerdJudgeOption {
+func WithContainerdJudgeWorkdir(wd string) ContainerdJudgeOption {
 	return func(svc *ContainerdJudgeServiceServer) error {
-		svc.options.Concurrency = cc
+		svc.options.JudgeWorkdir = wd
 		return nil
 	}
 }
 
-func WithContainerdJudgeWorkdir(wd string) ContainerdJudgeOption {
+func WithContainerdJudgeSeccomp(sc *specs.LinuxSeccomp) ContainerdJudgeOption {
 	return func(svc *ContainerdJudgeServiceServer) error {
-		svc.options.JudgeWorkdir = wd
+		svc.options.JudgeSeccompOption = sc
 		return nil
 	}
 }
